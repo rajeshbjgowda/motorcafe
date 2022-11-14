@@ -1,0 +1,53 @@
+.dashBoardWrapper {
+  .mainCardContainer {
+    .mainCard {
+      background-color: rosybrown;
+      color: antiquewhite;
+      .contentContainer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      padding: 0 10px;
+
+        .content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          z-index: 1;
+
+          & p {
+            text-align: left;
+            margin: 0;
+            width: 100%;
+            &:nth-child(1) {
+              font-weight: 600;
+              font-size: 35px;
+            }
+            &:nth-child(2) {
+              font-weight: 500;
+              font-size: 18px;
+            }
+          }
+        }
+
+        .icon {
+            z-index: 0;
+            color: rgba(0, 0, 0, 0.15);;
+          .MuiSvgIcon-root {
+            width: 5rem;
+            height: 5rem;
+          }
+        }
+      }
+
+      .cardFooter{
+        margin-top: 10px;
+        text-align: center;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.1);
+        padding: 5px 0;
+      }
+    }
+  }
+}
