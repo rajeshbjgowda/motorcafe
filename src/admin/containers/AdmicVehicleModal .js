@@ -31,6 +31,7 @@ import {
   updateDoc,
 } from "firebase/firestore/lite";
 import { async } from "@firebase/util";
+import { useDispatch } from "react-redux";
 
 const style = {
   position: "absolute",
@@ -80,6 +81,8 @@ const AdmicVehicleModal = () => {
   const vehicleref = collection(fireStore, "vehicle");
   const vehiclemodelref = collection(fireStore, "vehicleModel");
   const db = getFirestore();
+
+  const dispatch = useDispatch();
   const handleChange = (event) => {
     setCompanyName(event.target.value);
   };
@@ -118,17 +121,8 @@ const AdmicVehicleModal = () => {
       };
     });
     console.log(companies, "companies");
-    // const docRef = await doc(db, "vehicle", `${docu.data().vehicle_id}`);
-    // const docSnap = await getDoc(docRef);
-    // console.log(docSnap.data().company_name);
-    // const { company_name } = docSnap.data();
-    await details.docs.forEach(async (doc) => {
-      // console.log();
-      // console.log(doc.id, doc.data());
-      // const cityRef = db.collection("vehicle").doc(`${doc.data().vehicle_id}`);
-      // const vehicle = await cityRef.get();
-      // console.log("raj", vehicle);
 
+    await details.docs.forEach(async (doc) => {
       let data = {
         ...doc.data(),
       };
@@ -199,7 +193,7 @@ const AdmicVehicleModal = () => {
 
   const handleUpdate = (id) => {
     setModelUpdateId(id);
-    getModelData();
+    handleOpen();
   };
   const handleDelete = async (id) => {
     const docRef = doc(db, "vehicleModel", id.toString());

@@ -5,6 +5,10 @@ import { styled } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell, { tableCellClasses } from "@mui/material/TableCell";
+import {
+  StyledTableCell,
+  StyledTableRow,
+} from "../components/mui-components/TableComponents";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
@@ -14,7 +18,10 @@ import Modal from "@mui/material/Modal";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import moment from "moment/moment";
-import { fireStore } from "./firebase";
+import { fireStore, storage } from "./firebase";
+
+import { ref, getDownloadURL, uploadBytesResumable } from "firebase/storage";
+
 import {
   addDoc,
   collection,
@@ -26,6 +33,20 @@ import {
 } from "firebase/firestore/lite";
 import { async } from "@firebase/util";
 import { DockTwoTone } from "@mui/icons-material";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import { FormHelperText, Grid } from "@mui/material";
+import {
+  getVehicleCatrgoryData,
+  getVehicleCompanyData,
+} from "../redux/actions/AdminVehicle";
+import { useSelector, useDispatch } from "react-redux";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { useForm } from "react-hook-form";
+
 const style = {
   position: "absolute",
   top: "50%",
@@ -39,47 +60,44 @@ const style = {
   px: 4,
   pb: 3,
 };
+const schema = yup.object().shape({
+  categoryId: yup.string().required("required"),
+  vehicleCompany: yup.string().required("required"),
+});
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "#d9edf7 ",
-    fontWeight: "700",
-    padding: "15px 10px",
-    "&.MuiTableCell-head": {
-      minWidth: "100px",
-    },
-  },
-  [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
-  },
-}));
-
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
-  },
-  // hide last border
-  "&:last-child td, &:last-child th": {
-    border: 0,
-  },
-}));
 const AdmicVehicleCompany = () => {
   const [open, setOpen] = React.useState(false);
   const [openUpdateModal, setOpenUpdateModal] = React.useState(false);
 
-  const [vehicleCompany, setVehicleCompany] = useState("");
   const [updateVehicleCompany, setUpdateVehicleCompany] = useState("");
 
-  const [vehicalCompaniesList, setVehicalCompaniesList] = useState([]);
   const [updateId, setUpdateId] = useState("");
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
+  const dispatch = useDispatch();
+  const vehicleCategories = useSelector(
+    (state) => state.adminVehicleReducer.vehicleCategories
+  );
+  const vehicalCompaniesList = useSelector(
+    (state) => state.adminVehicleReducer.vehicalCompaniesList
+  );
   const vehicleref = collection(fireStore, "vehicle");
+  const vehicleCategoryRef = collection(fireStore, "vehicle_category");
+
   const db = getFirestore();
   const handleOpen = () => {
     setOpen(true);
   };
   const handleClose = () => {
     setOpen(false);
+    setUpdateId("");
   };
   const handleOpenUpdateModal = () => {
     setOpenUpdateModal(true);
@@ -88,73 +106,55 @@ const AdmicVehicleCompany = () => {
     setOpenUpdateModal(false);
   };
 
-  let getData = async () => {
-    console.log("effect");
-    let details = await getDocs(vehicleref);
-
-    let vechicleCompanies = [];
-    details.docs.forEach((doc) => {
-      // console.log();
-      // console.log(doc.id, doc.data());
-      vechicleCompanies = [...vechicleCompanies, { id: doc.id, ...doc.data() }];
-    });
-    setVehicalCompaniesList([...vechicleCompanies]);
-  };
   useEffect(() => {
-    getData();
-
-    return () => {
-      setVehicalCompaniesList([]);
-    };
+    // getVehicleCategories()
+    dispatch(getVehicleCatrgoryData());
+    dispatch(getVehicleCompanyData());
   }, []);
-  const addCompanyList = async () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const date = today.getDay();
+  const addCompanyList = async (data) => {
+    const { vehicleCompany, categoryId } = data;
+    if (updateId) {
+      const docRef = doc(db, "vehicle", updateId);
+      let updatedata = {
+        company_name: vehicleCompany,
+        category_id: categoryId,
+      };
 
-    let vehicleCompanyDetails = {
-      company_name: vehicleCompany,
-      created_at: new Date().toUTCString(),
-      updatedAt: new Date().toUTCString(),
-    };
-    addDoc(vehicleref, vehicleCompanyDetails);
+      await updateDoc(docRef, updatedata)
+        .then((docRef) => {
+          console.log("Value of an Existing Document Field has been updated");
+        })
+        .catch((error) => {
+          console.log(error);
+        });
 
-    getData();
+      handleCloseUpdateModal();
+    } else {
+      let vehicleCompanyDetails = {
+        company_name: vehicleCompany,
+        category_id: categoryId,
+      };
+      addDoc(vehicleref, vehicleCompanyDetails);
+
+      console.log("adding fucntion");
+    }
+    dispatch(getVehicleCompanyData());
     handleClose();
-
-    console.log("adding fucntion");
   };
 
   const handleDelete = async (id) => {
     const docRef = doc(db, "vehicle", id.toString());
     deleteDoc(docRef);
-    getData();
+    dispatch(getVehicleCompanyData());
   };
 
   const handleUpdate = (id) => {
-    handleOpenUpdateModal();
     setUpdateId(id);
+    handleOpen();
     // const res = await db.collection("vehicle").doc(id).set(data);
   };
 
-  const updateDocumnet = async () => {
-    const docRef = doc(db, "vehicle", updateId);
-    let data = {
-      company_name: updateVehicleCompany,
-      updatedAt: new Date().toUTCString(),
-    };
-
-    await updateDoc(docRef, data)
-      .then((docRef) => {
-        console.log("Value of an Existing Document Field has been updated");
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-    getData();
-    handleCloseUpdateModal();
-  };
+  console.log(vehicleCategories);
   return (
     <div className="serviceplanContainer">
       <h1>VEHICAL COMPANIES</h1>
@@ -176,8 +176,6 @@ const AdmicVehicleCompany = () => {
                 <StyledTableCell align="center">
                   Vehical company
                 </StyledTableCell>
-                <StyledTableCell align="center">Created AT</StyledTableCell>
-                <StyledTableCell align="center">UpdatedAt</StyledTableCell>
                 <StyledTableCell align="center">Edit</StyledTableCell>
                 <StyledTableCell align="center">Delete</StyledTableCell>
               </TableRow>
@@ -192,12 +190,6 @@ const AdmicVehicleCompany = () => {
                     <StyledTableCell align="center">
                       {company.company_name}
                     </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {company.created_at}
-                    </StyledTableCell>{" "}
-                    <StyledTableCell align="center">
-                      {company.updatedAt}
-                    </StyledTableCell>{" "}
                     <StyledTableCell align="center">
                       <Button
                         onClick={() => handleUpdate(company.id)}
@@ -233,66 +225,65 @@ const AdmicVehicleCompany = () => {
             <div className="heading">
               <h3>CREATE VEHICLE COMPANY</h3>
             </div>
-            <div className="planFeildContainer">
-              <TextField
-                id="outlined-basic"
-                label="Vehicle Company"
-                variant="outlined"
-                fullWidth
-                onChange={(e) => setVehicleCompany(e.target.value)}
-              />
-            </div>
-            <div className="btnContainer">
-              <Button variant="contained" color="warning" onClick={handleClose}>
-                cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={addCompanyList}
-              >
-                add{" "}
-              </Button>
-            </div>
-          </div>
-        </Box>
-      </Modal>
-      <Modal
-        open={openUpdateModal}
-        onClose={handleCloseUpdateModal}
-        aria-labelledby="parent-modal-title"
-        aria-describedby="parent-modal-description"
-      >
-        <Box sx={{ ...style }}>
-          <div className="addPlanContainer">
-            <div className="heading">
-              <h3>UPDATE VEHICLE COMPANY</h3>
-            </div>
-            <div className="planFeildContainer">
-              <TextField
-                id="outlined-basic"
-                label="Vehicle Company"
-                variant="outlined"
-                fullWidth
-                onChange={(e) => setUpdateVehicleCompany(e.target.value)}
-              />
-            </div>
-            <div className="btnContainer">
-              <Button
-                variant="contained"
-                color="warning"
-                onClick={handleCloseUpdateModal}
-              >
-                cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={updateDocumnet}
-              >
-                add{" "}
-              </Button>
-            </div>
+            <form onSubmit={handleSubmit(addCompanyList)}>
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <div className="planFeildContainer">
+                    <TextField
+                      id="outlined-basic"
+                      label="Vehicle Company"
+                      variant="outlined"
+                      fullWidth
+                      {...register("vehicleCompany")}
+                      error={errors.vehicleCompany}
+                      helperText={errors.vehicleCompany?.message}
+                    />
+                  </div>
+                </Grid>
+                <Grid item xs={8}>
+                  <div>
+                    <FormControl fullWidth error={errors.categoryId}>
+                      <InputLabel id="demo-simple-select-label">
+                        Company
+                      </InputLabel>
+                      <Select
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
+                        label="Category"
+                        {...register("categoryId")}
+                      >
+                        {Object.keys(vehicleCategories).map((item, index) => {
+                          console.log(vehicleCategories[item]);
+                          return (
+                            <MenuItem key={item} value={item}>
+                              {vehicleCategories[item].vehicle_type}
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                      {errors.categoryId && (
+                        <FormHelperText>
+                          {errors.categoryId?.message}
+                        </FormHelperText>
+                      )}
+                    </FormControl>
+                  </div>
+                </Grid>
+              </Grid>
+
+              <div className="btnContainer">
+                <Button
+                  variant="contained"
+                  color="warning"
+                  onClick={handleClose}
+                >
+                  cancel
+                </Button>
+                <Button variant="contained" color="primary" type="submit">
+                  {updateId ? "update" : "add"}
+                </Button>
+              </div>
+            </form>
           </div>
         </Box>
       </Modal>

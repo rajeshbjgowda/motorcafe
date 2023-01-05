@@ -5,6 +5,7 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import DashBoard from "./containers/DashBoard";
 import SideBar from "./components/SideBar";
 import { maxWidth } from "@mui/system";
+import { useSelector } from "react-redux";
 const drawerWidth = 240;
 
 const DrawerHeader = styled("div")(({ theme }) => ({
@@ -25,6 +26,8 @@ const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
       duration: theme.transitions.duration.leavingScreen,
     }),
 
+    width: "100%",
+
     marginLeft: `-${drawerWidth}px`,
     ...(open && {
       transition: theme.transitions.create("margin", {
@@ -42,14 +45,18 @@ const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
 
 function AdminDashBoard() {
   const [open, setOpen] = useState(true);
-
+  const userData = useSelector((state) => state.authUserReducer.user);
   const handleDrawerToggel = () => {
     setOpen(!open);
   };
   return (
     <Box sx={{ display: "flex" }}>
-      <SideBar handleDrawerToggel={handleDrawerToggel} open={open} />
-      <Main open={open}>
+      <SideBar
+        handleDrawerToggel={handleDrawerToggel}
+        open={open}
+        userData={userData}
+      />
+      <Main open={open} style={{ overflowX: "hidden" }}>
         <DrawerHeader />
         <Outlet />
       </Main>

@@ -16,7 +16,15 @@ import {
   getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  browserLocalPersistence,
 } from "firebase/auth";
+import { app, auth } from "./containers/firebase";
+import { doc, getDoc, getFirestore } from "firebase/firestore/lite";
+import { useDispatch } from "react-redux";
+import { getLoggedUser } from "./redux/actions/loginCredentail";
+import { useNavigate } from "react-router-dom";
 
 function Copyright(props) {
   return (
@@ -39,13 +47,55 @@ function Copyright(props) {
 const theme = createTheme();
 
 export default function SignIn() {
-  const handleSubmit = (event) => {
+  const [user, setUser] = React.useState({});
+  const [isLogged, setIsLogged] = React.useState(false);
+
+  const db = getFirestore(app);
+
+  const dispath = useDispatch();
+
+  const navigate = useNavigate();
+
+  const getUserData = async (uid) => {
+    const docRef = doc(db, "users", uid);
+    const docSnap = await getDoc(docRef);
+    console.log("rajesh", docSnap.data().role);
+    setUser({ ...docSnap.data() });
+    if (docSnap.data().role === "user") {
+      navigate("/admin/service");
+    }
+    dispath(getLoggedUser({ ...docSnap.data() }));
+  };
+
+  React.useEffect(() => {
+    onAuthStateChanged(auth, (currentUser) => {
+      console.log("authentication", currentUser);
+      if (currentUser) {
+        getUserData(currentUser.uid);
+        navigate("/admin/service/service-plan");
+      }
+    });
+  }, []);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     console.log({
       email: data.get("email"),
       password: data.get("password"),
     });
+
+    try {
+      const user = await signInWithEmailAndPassword(
+        auth,
+        data.get("email"),
+        data.get("password")
+      );
+
+      console.log(user);
+    } catch (error) {
+      console.log(error.message);
+    }
   };
 
   return (
@@ -112,6 +162,8 @@ export default function SignIn() {
         </Box>
         <Copyright sx={{ mt: 8, mb: 4 }} />
       </Container>
+
+      <button onClick={() => signOut(auth)}>signout</button>
     </ThemeProvider>
   );
 }

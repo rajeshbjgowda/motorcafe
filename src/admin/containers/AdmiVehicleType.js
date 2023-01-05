@@ -15,6 +15,8 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import { PunchClock } from "@mui/icons-material";
 import { fireStore } from "./firebase";
+
+import { useSelector, useDispatch } from "react-redux";
 import {
   addDoc,
   collection,
@@ -25,7 +27,14 @@ import {
   getFirestore,
   updateDoc,
 } from "firebase/firestore/lite";
-
+import { getVehicleTypeData } from "../redux/actions/AdminVehicle";
+import {
+  StyledTableCell,
+  StyledTableRow,
+} from "../components/mui-components/TableComponents";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { useForm } from "react-hook-form";
 const style = {
   position: "absolute",
   top: "50%",
@@ -39,52 +48,31 @@ const style = {
   px: 4,
   pb: 3,
 };
+const schema = yup.object().shape({
+  vehicleType: yup.string().required("required"),
+});
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "#d9edf7 ",
-    fontWeight: "700",
-    padding: "15px 10px",
-    "&.MuiTableCell-head": {
-      minWidth: "100px",
-    },
-  },
-  [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
-  },
-}));
-
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
-  },
-  // hide last border
-  "&:last-child td, &:last-child th": {
-    border: 0,
-  },
-}));
 const AdmiVehicleType = () => {
   const [open, setOpen] = React.useState(false);
-  const [vehicleType, setVehicleType] = useState("");
-  const [vehicalTypeList, setVehicalTypeList] = useState([]);
   const [modelUpdateId, setModelUpdateId] = useState("");
   const vehicleTypesRef = collection(fireStore, "vehicle_type");
+
+  const dispatch = useDispatch();
+  const vehicalTypeList = useSelector(
+    (state) => state.adminVehicleReducer.vehicalTypeList
+  );
   const db = getFirestore();
-  let getVehicleTypes = async () => {
-    console.log("effect");
-    let details = await getDocs(vehicleTypesRef);
 
-    let vehicleTypes = [];
-    details.docs.forEach((doc) => {
-      // console.log();
-      // console.log(doc.id, doc.data());
-      vehicleTypes = [...vehicleTypes, { id: doc.id, ...doc.data() }];
-    });
-    setVehicalTypeList([...vehicleTypes]);
-  };
-
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
   useEffect(() => {
-    getVehicleTypes();
+    dispatch(getVehicleTypeData());
   }, []);
 
   const handleOpen = () => {
@@ -94,8 +82,8 @@ const AdmiVehicleType = () => {
     setOpen(false);
   };
 
-  const handleAddType = async (e) => {
-    e.preventDefault();
+  const handleAddType = async (data) => {
+    const { vehicleType } = data;
 
     if (modelUpdateId) {
       const docRef = doc(db, "vehicle_type", modelUpdateId);
@@ -126,19 +114,19 @@ const AdmiVehicleType = () => {
       }
     }
     handleClose();
-    getVehicleTypes();
+    dispatch(getVehicleTypeData());
     setModelUpdateId("");
   };
 
   const handleUpdate = (id) => {
     setModelUpdateId(id);
-    getVehicleTypes();
+    dispatch(getVehicleTypeData());
     handleOpen();
   };
   const handleDelete = async (id) => {
     const docRef = doc(db, "vehicle_type", id.toString());
     deleteDoc(docRef);
-    getVehicleTypes();
+    dispatch(getVehicleTypeData());
   };
 
   return (
@@ -213,32 +201,27 @@ const AdmiVehicleType = () => {
             <div className="heading">
               <h3>CREATE VEHICLE TYPE</h3>
             </div>
-            <div className="planFeildContainer">
-              <TextField
-                id="outlined-basic"
-                label="Enter Vehicle Type"
-                variant="outlined"
-                value={vehicleType}
-                onChange={(e) => setVehicleType(e.target.value)}
-                fullWidth
-              />
-            </div>
-            <div className="btnContainer">
-              <Button
-                variant="contained"
-                color="warning"
-                onClick={() => setVehicleType("")}
-              >
-                reset
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleAddType}
-              >
-                add plan{" "}
-              </Button>
-            </div>
+            <form onSubmit={handleSubmit(handleAddType)}>
+              <div className="planFeildContainer">
+                <TextField
+                  id="outlined-basic"
+                  label="Enter Vehicle Type"
+                  variant="outlined"
+                  fullWidth
+                  {...register("vehicleType")}
+                  error={errors.vehicleType}
+                  helperText={errors.vehicleType?.message}
+                />
+              </div>
+              <div className="btnContainer">
+                <Button variant="contained" color="warning">
+                  reset
+                </Button>
+                <Button variant="contained" color="primary" type="submit">
+                  add plan{" "}
+                </Button>
+              </div>
+            </form>
           </div>
         </Box>
       </Modal>

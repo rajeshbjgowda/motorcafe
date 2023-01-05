@@ -33,6 +33,7 @@ import Drawer from "@mui/material/Drawer";
 import CustomList from "./CustomList";
 import Avatar from "@mui/material/Avatar";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const drawerWidth = 240;
 
@@ -65,10 +66,12 @@ const DrawerHeader = styled("div")(({ theme }) => ({
 export default function MiniDrawer(props) {
   const theme = useTheme();
 
+  const { userData } = props;
+  console.log("rajesh", userData);
   const handleDrawerToggel = () => {
     props.handleDrawerToggel();
   };
-
+  // normal_admin
   const { open } = props;
   return (
     <>
@@ -98,7 +101,6 @@ export default function MiniDrawer(props) {
             width: drawerWidth,
             flexShrink: 0,
 
-            display: { xs: "none", sm: "block" },
             "& .MuiDrawer-paper": {
               width: drawerWidth,
               boxSizing: "border-box",
@@ -130,13 +132,17 @@ export default function MiniDrawer(props) {
               </div>
             </Link>
           </div>
+
+          {/* {userData.role === "normal_admin" ? (
+            ""
+          ) : ( */}
           <CustomList
             component={"Users"}
             subdomain="users"
             subMenu={userSubmenu}
             NavIcon={<PersonIcon />}
           />
-
+          {/* )} */}
           <CustomList
             component={"service plan"}
             subdomain="service"
@@ -195,100 +201,6 @@ export default function MiniDrawer(props) {
             NavIcon={<EmojiObjectsOutlinedIcon />}
           />
         </Drawer>
-
-        <Drawer
-          sx={{
-            width: drawerWidth,
-            flexShrink: 0,
-
-            display: { xs: "block", sm: "none" },
-            "& .MuiDrawer-paper": {
-              width: drawerWidth,
-              boxSizing: "border-box",
-              backgroundColor: "#222d32",
-            },
-          }}
-          onClose={handleDrawerToggel}
-          variant="temporary"
-          anchor="left"
-          open={open}
-          className="drawerContainer"
-        >
-          <div className="adminDetails">
-            <Avatar
-              alt="Remy Sharp"
-              src="/static/images/avatar/1.jpg"
-              sx={{ width: 46, height: 46 }}
-            />
-
-            <h3>admin</h3>
-          </div>
-          <div className="navItem">
-            <Link to={"/"}>
-              <div className="list">
-                <span className="listIcon">
-                  <DashboardIcon />
-                </span>
-                <span className="navTxt">Dash Board</span>
-              </div>
-            </Link>
-          </div>
-          <CustomList
-            component={"Users"}
-            subdomain="users"
-            subMenu={userSubmenu}
-            NavIcon={<PersonIcon />}
-          />
-
-          <CustomList
-            component={"service plan"}
-            subdomain="service"
-            subMenu={servicePlaneSubMenu}
-            NavIcon={<EqualizerIcon />}
-          />
-
-          <CustomList
-            component={"vehical"}
-            subdomain="vehical"
-            subMenu={vehicalSubMenu}
-            NavIcon={<DirectionsCarIcon />}
-          />
-          <CustomList
-            component={"appointment"}
-            subdomain="appointment"
-            subMenu={appointmentSubmenu}
-            NavIcon={<CalendarMonthIcon />}
-          />
-          <CustomList
-            component={"home section"}
-            subdomain="home-section"
-            subMenu={homeSectionSubmenu}
-            NavIcon={<HomeIcon />}
-          />
-          <CustomList
-            component={"site setting"}
-            subdomain="site-setting"
-            subMenu={siteSettingSubmenu}
-            NavIcon={<SettingsIcon />}
-          />
-          <div className="navItem">
-            <a>
-              <div className="list">
-                <span className="listIcon">
-                  <ListIcon />
-                </span>
-                <span className="navTxt">Booking Reports</span>
-              </div>
-            </a>
-          </div>
-
-          <CustomList
-            component={"help"}
-            subdomain="help"
-            subMenu={helpSubmenu}
-            NavIcon={<EmojiObjectsOutlinedIcon />}
-          />
-        </Drawer>
       </Box>
     </>
   );
@@ -311,8 +223,8 @@ const servicePlaneSubMenu = [
     route: "service-plan",
   },
   {
-    name: "service plance price",
-    route: "service-plance-price",
+    name: "service plan price",
+    route: "service-plan-price",
   },
 ];
 
@@ -329,6 +241,10 @@ const vehicalSubMenu = [
     name: "vehicle type",
     route: "vehicle-type",
   },
+  {
+    name: "vehicle category",
+    route: "vehicle-category",
+  },
 ];
 
 const appointmentSubmenu = [
@@ -340,44 +256,33 @@ const appointmentSubmenu = [
     name: "payment",
     route: "payments",
   },
+
   {
-    name: "payment mode",
-    route: "payment-mode",
-  },
-  {
-    name: "status",
-    route: "payment-status",
+    name: "canceled appointments",
+    route: "canceled_appointments",
   },
 ];
 
 const homeSectionSubmenu = [
   {
-    name: "home section setting",
-    route: "settings",
-  },
-  {
     name: "slidder",
     route: "slidder",
   },
   {
-    name: "service",
-    route: "service",
+    name: "car services",
+    route: "car-services",
   },
   {
-    name: "gallery",
-    route: "gallery",
+    name: "teams",
+    route: "teams",
   },
   {
-    name: "facts",
-    route: "facts",
+    name: "plans",
+    route: "plans",
   },
   {
-    name: "testimonial",
-    route: "testimonial",
-  },
-  {
-    name: "blogs",
-    route: "blog",
+    name: "details",
+    route: "details",
   },
 ];
 

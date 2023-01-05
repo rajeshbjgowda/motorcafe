@@ -37,11 +37,14 @@ const CustomList = (props) => {
 
   const handleClick = () => {
     setOpen(!open);
+    navigate(`/admin/${subdomain}/${subMenu[0].route}`);
   };
 
   const handleRoute = (route) => {
     navigate(`/admin/${subdomain}/${route}`);
   };
+
+  console.log(location.pathname.split("/")[3], "location.pathname");
   return (
     <div className="customList">
       <li
@@ -69,6 +72,11 @@ const CustomList = (props) => {
                   onClick={() => handleRoute(menu.route)}
                   style={{ textTransform: "capitalize" }}
                   key={index}
+                  className={
+                    location.pathname.split("/")[3] === menu.route
+                      ? "activeLink"
+                      : ""
+                  }
                 >
                   {menu.name}
                 </p>

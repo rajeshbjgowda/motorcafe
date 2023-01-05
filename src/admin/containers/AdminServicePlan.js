@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./styles/adminServicePlan.scss";
 import { styled } from "@mui/material/styles";
 
@@ -13,8 +13,11 @@ import Box from "@mui/material/Box";
 import Modal from "@mui/material/Modal";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import Grid from "@mui/material/Grid";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 
-import { app, fireStore } from "./firebase";
+import { app, fireStore, storage } from "./firebase";
 import {
   addDoc,
   arrayRemove,
@@ -28,6 +31,25 @@ import {
   getFirestore,
   updateDoc,
 } from "firebase/firestore/lite";
+import {
+  StyledTableCell,
+  StyledTableRow,
+} from "../components/mui-components/TableComponents";
+import { useDispatch } from "react-redux";
+import { getServicePlanData } from "../redux/actions/serviceplan";
+import { useSelector } from "react-redux";
+import { getServicePlanPriceData } from "../redux/actions/serviceplanprice";
+import { useForm } from "react-hook-form";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  listAll,
+  list,
+} from "firebase/storage";
+import { setNestedObjectValues } from "formik";
+import { FormHelperText } from "@mui/material";
+import { SUPPORTED_FORMATS } from "../components/yupValidation/imageValidation";
 
 const style = {
   position: "absolute",
@@ -42,84 +64,115 @@ const style = {
   px: 4,
   pb: 3,
 };
+const schema = yup.object().shape({
+  plan: yup.string().required("reqired"),
+  plan_price: yup
+    .number("please enter numbers only")
+    .typeError("please enter value")
+    .positive("please enter positive numbers")
+    .required("please enter value"),
+  plan_discount: yup
+    .number("please enter numbers only")
+    .typeError("please enter value")
+    .positive("please enter positive numbers"),
+  plan_advance: yup
+    .number("please enter numbers only")
+    .typeError("please enter value")
+    .positive("please enter positive numbers"),
+  plan_duration: yup.string(),
+  img_url: yup
+    .mixed()
+    .test("required", "You need to provide a file", (value) => {
+      console.log("rajesh", value);
+      return value && value.length;
+    })
+    .test("fileSize", "The file is too large", (value, context) => {
+      return value && value[0] && value[0].size <= 200000;
+    })
+    .test("type", "We only support jpeg", function (value) {
+      return value && value[0] && SUPPORTED_FORMATS.includes(value[0].type);
+    }),
+});
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "#d9edf7 ",
-    fontWeight: "700",
-    padding: "15px 10px",
-    "&.MuiTableCell-head": {
-      minWidth: "100px",
-    },
-  },
-  [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
-  },
-}));
+const schema_update = yup.object().shape({
+  update_plan: yup.string().required("reqired"),
+});
+const add_schema = yup.object().shape({
+  add_service: yup.string().required("reqired"),
+  service_img_url: yup
+    .mixed()
+    .test(2000, "File is too large", (value) => value.size <= 2000)
+    .test("fileType", "Your Error Message", (value) =>
+      SUPPORTED_FORMATS.includes(value.type)
+    ),
+});
 
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
-  },
-  // hide last border
-  "&:last-child td, &:last-child th": {
-    border: 0,
-  },
-}));
 const AdminServicePlan = () => {
   const [open, setOpen] = useState(false);
   const [serviceIncludeOpen, setServiceIncludeOpen] = useState(false);
 
-  const [services, setServices] = useState([]);
   const [includedServices, setIncludedServices] = useState([]);
-  const [includedServicesList, setIncludedServicesList] = useState({});
 
-  const [servicePlan, setServicePlan] = useState("");
   const [addServiceToPlan, setAddServicePlan] = useState("");
   const [modelUpdateId, setModelUpdateId] = useState("");
   const [planId, setPlanId] = useState("");
+  const [serviceID, setServiceId] = useState("");
+
+  const [serviceImage, setServiceImage] = useState("");
+  const [uploadedImage, setUploadedImage] = useState("");
   const planRef = collection(fireStore, "plan");
   const servicesRef = collection(fireStore, "service");
   const db = getFirestore(app);
 
-  let getPlans = async () => {
-    console.log("effect");
-    let plansDetails = await getDocs(planRef);
-    console.log("effect");
+  const dispatch = useDispatch();
 
-    let plans = [];
-    plansDetails.docs.forEach((doc) => {
-      // console.log();
-      // console.log(doc.id, doc.data());
-      plans = [...plans, { id: doc.id, ...doc.data() }];
-    });
-    setServices([...plans]);
-  };
-  const getServices = async () => {
-    console.log("Services");
-    let details = await getDocs(servicesRef);
+  const servicePlans = useSelector(
+    (state) => state.servicePlanReducer.service_plans
+  );
+  const includedServicesList = useSelector(
+    (state) => state.servicePlanPriceReducer.service_plans_prices
+  );
 
-    let services = {};
-    details.docs.forEach((doc) => {
-      console.log();
-      services = {
-        ...services,
+  const admin = useSelector((state) => state.authUserReducer.user);
 
-        [doc.data().plan_id]: {
-          id: doc.id,
-          ...doc.data(),
-        },
-      };
-    });
-    console.log(services);
-    setIncludedServicesList(services);
-  };
-  const createServiceDocument = (serviceName, id) => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
+
+  const {
+    register: register1,
+    handleSubmit: handleUpdateValues,
+    formState: { errors: updateErrors },
+    setValue: setValue2,
+  } = useForm({
+    resolver: yupResolver(schema_update),
+  });
+
+  const {
+    register: register2,
+    handleSubmit: handleAddServices,
+    formState: { errors: serviceErrors },
+    setValue: setValue3,
+  } = useForm({
+    resolver: yupResolver(add_schema),
+  });
+  const createServiceDocument = (data, id) => {
     const Details = {
-      service_include: [],
-      service_name: serviceName,
+      advance_price: data.plan_advance,
+      discount: data.plan_discount,
+      duration: data.plan_duration,
       images: [],
       plan_id: id,
+
+      price: data.plan_price,
+
+      service_include: [],
+      service_name: data.plan,
     };
 
     try {
@@ -129,18 +182,30 @@ const AdminServicePlan = () => {
       console.log(error);
     }
   };
-  const handleAddPlans = async (e) => {
-    e.preventDefault();
-    console.log("hnalde update", modelUpdateId);
+  const handleAddPlans = async (data) => {
+    console.log("error");
+    console.log("data.img_url", data.img_url);
+    if (data.img_url) {
+      console.log("DDD");
+      const imageRef = await ref(storage, `images/${data.img_url.name}`);
+      await uploadBytes(imageRef, data.img_url).then((snapshot) => {
+        getDownloadURL(snapshot.ref).then((url) => {
+          console.log(url);
+          setUploadedImage(url);
+        });
+      });
+    }
+
     if (modelUpdateId) {
+      console.log("error");
       const docRef = doc(db, "plan", modelUpdateId);
-      let data = {
-        field_name: servicePlan,
+      let Updatedata = {
+        field_name: data.plan,
 
         updated_at: new Date().toUTCString(),
       };
 
-      await updateDoc(docRef, data)
+      await updateDoc(docRef, Updatedata)
         .then((docRef) => {
           console.log("Value of an Existing Document Field has been updated");
         })
@@ -149,43 +214,48 @@ const AdminServicePlan = () => {
         });
     } else {
       const Details = {
-        field_name: servicePlan,
+        field_name: data.plan,
         created_at: new Date().toUTCString(),
         updated_at: new Date().toUTCString(),
-        img_url: "",
+        img_url: uploadedImage,
+        adminId: admin.id,
       };
 
       try {
         addDoc(planRef, Details).then(async (res) => {
-          console.log("response", res.id);
-          await createServiceDocument(servicePlan, res.id);
+          await createServiceDocument(data, res.id);
         });
       } catch (error) {
         console.log(error);
       }
     }
-    getPlans();
+    dispatch(getServicePlanData());
     handleClose();
 
-    setServicePlan("");
     setModelUpdateId("");
   };
 
   useEffect(() => {
-    console.log("SssSsdf");
-    getPlans();
-    getServices();
+    dispatch(getServicePlanData());
+
+    dispatch(getServicePlanPriceData());
   }, []);
+
+  useEffect(() => {
+    setIncludedServices(includedServicesList[planId]);
+  }, [includedServicesList]);
   const handleOpen = () => {
     setOpen(true);
   };
   const handleClose = () => {
     setOpen(false);
+    setModelUpdateId("");
   };
   const handleOpenServiceIncludeModal = (id) => {
-    setPlanId(includedServicesList[id].id);
+    setPlanId(id);
+    setServiceId(includedServicesList[id].id);
     setServiceIncludeOpen(true);
-    console.log(includedServicesList[id], id, includedServicesList);
+
     setIncludedServices(includedServicesList[id]);
   };
   const handleCloseServiceIncludeModal = () => {
@@ -198,37 +268,81 @@ const AdminServicePlan = () => {
   };
   const handleDelete = async (id) => {
     const docRef = doc(db, "plan", id.toString());
+
     deleteDoc(docRef);
-    getPlans();
+
+    let serviceId = includedServicesList[id].id;
+    const serviceRef = doc(db, "service", serviceId.toString());
+    deleteDoc(serviceRef);
+    dispatch(getServicePlanData());
   };
-  const addServicesToPlan = async (id) => {
-    const docRef = doc(db, "service", planId);
+  const addServicesToPlan = async (data) => {
+    const docRef = doc(db, "service", serviceID);
+    let service_image;
+    if (data.service_img_url) {
+      console.log("DDD");
+
+      const imageRef = await ref(
+        storage,
+        `service_images/${data.service_img_url.name}`
+      );
+      await uploadBytes(imageRef, data.service_img_url).then((snapshot) => {
+        getDownloadURL(snapshot.ref).then((url) => {
+          setServiceImage(url);
+        });
+      });
+    }
+
+    console.log(service_image);
 
     await updateDoc(docRef, {
-      service_include: arrayUnion(addServiceToPlan), // removes "1" from the array
+      images: arrayUnion(serviceImage),
+      service_include: arrayUnion(data.add_service),
+      // removes "1" from the array
     });
-    getServices();
+    await dispatch(getServicePlanPriceData());
 
-    console.log(planId);
+    setAddServicePlan("");
   };
 
-  const deleteServiceInPlan = async (service) => {
-    const docRef = doc(db, "service", planId);
+  const deleteServiceInPlan = async (service, index) => {
+    const docRef = doc(db, "service", serviceID);
+    console.log(index, "delete functin");
+    try {
+      await updateDoc(docRef, {
+        service_include: arrayRemove(service), // removes "1" from the array
+      });
+    } catch (error) {
+      console.log(error);
+    }
 
-    await updateDoc(docRef, {
-      service_include: arrayRemove(service), // removes "1" from the array
-    });
-    getServices();
-
-    console.log(planId);
+    dispatch(getServicePlanPriceData());
   };
-  const addServiceInclude = async () => {};
 
-  console.log(
-    includedServices,
-    includedServicesList,
-    includedServices.service_include
-  );
+  const handleuUpdatePlans = async (data) => {
+    alert("enetrtng to updation");
+    if (modelUpdateId) {
+      console.log("error");
+      const docRef = doc(db, "plan", modelUpdateId);
+      let Updatedata = {
+        field_name: data.update_plan,
+
+        updated_at: new Date().toUTCString(),
+      };
+
+      await updateDoc(docRef, Updatedata)
+        .then((docRef) => {
+          console.log("Value of an Existing Document Field has been updated");
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    }
+    dispatch(getServicePlanData());
+    handleClose();
+
+    setModelUpdateId("");
+  };
   return (
     <div className="serviceplanContainer">
       <h1>SERVICE PLAN</h1>
@@ -255,50 +369,52 @@ const AdminServicePlan = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {services.map((servicePlan, index) => (
-                <StyledTableRow key={servicePlan.id}>
-                  <StyledTableCell align="center">{index + 1}</StyledTableCell>
-                  <StyledTableCell align="center">
-                    {servicePlan.field_name}
-                  </StyledTableCell>
-                  <StyledTableCell align="center">
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      onClick={() =>
-                        handleOpenServiceIncludeModal(servicePlan.id)
-                      }
-                    >
-                      services include
-                    </Button>
-                  </StyledTableCell>{" "}
-                  <StyledTableCell align="center">
-                    {/* {console.log(servicePlan.created_at.seconds)} */}
-                    {/* {servicePlan.created_at} */}
-                  </StyledTableCell>{" "}
-                  <StyledTableCell align="center">
-                    {/* {servicePlan.updated_at} */}
-                  </StyledTableCell>{" "}
-                  <StyledTableCell align="center">
-                    <Button
-                      variant="contained"
-                      onClick={() => handleUpdate(servicePlan.id)}
-                    >
-                      Edit
-                    </Button>
-                  </StyledTableCell>{" "}
-                  <StyledTableCell align="center">
-                    <Button
-                      variant="contained"
-                      color="error"
-                      onClick={() => handleDelete(servicePlan.id)}
-                    >
-                      delete
-                    </Button>
-                  </StyledTableCell>
-                </StyledTableRow>
-              ))}
+              {servicePlans &&
+                servicePlans.map((servicePlan, index) => (
+                  <StyledTableRow key={servicePlan.id}>
+                    <StyledTableCell align="center">
+                      {index + 1}
+                    </StyledTableCell>
+                    <StyledTableCell align="center">
+                      {servicePlan.field_name}
+                    </StyledTableCell>
+                    <StyledTableCell align="center">
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        onClick={() => {
+                          handleOpenServiceIncludeModal(servicePlan.id);
+                        }}
+                      >
+                        services include
+                      </Button>
+                    </StyledTableCell>{" "}
+                    <StyledTableCell align="center">
+                      {servicePlan.created_at}
+                    </StyledTableCell>{" "}
+                    <StyledTableCell align="center">
+                      {servicePlan.updated_at}
+                    </StyledTableCell>{" "}
+                    <StyledTableCell align="center">
+                      <Button
+                        variant="contained"
+                        onClick={() => handleUpdate(servicePlan.id)}
+                      >
+                        Edit
+                      </Button>
+                    </StyledTableCell>{" "}
+                    <StyledTableCell align="center">
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => handleDelete(servicePlan.id)}
+                      >
+                        delete
+                      </Button>
+                    </StyledTableCell>
+                  </StyledTableRow>
+                ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -313,31 +429,138 @@ const AdminServicePlan = () => {
         <Box sx={{ ...style }}>
           <div className="addPlanContainer">
             <div className="heading">
-              <h3>CREATE SERVICE PLAN</h3>
+              <h3>CREATE SERVICEs PLAN</h3>
             </div>
-            <div className="planFeildContainer">
-              <TextField
-                id="outlined-basic"
-                label="Enter Plan"
-                variant="outlined"
-                fullWidth
-                value={servicePlan}
-                onChange={(e) => setServicePlan(e.target.value)}
-              />
-            </div>
-            <div className="btnContainer">
-              <Button variant="contained" color="warning">
-                reset
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleAddPlans}
-              >
-                add plan{" "}
-              </Button>
-            </div>
+
+            {modelUpdateId ? (
+              <form onSubmit={handleUpdateValues(handleuUpdatePlans)}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <div className="planFeildContainer">
+                      <TextField
+                        id="outlined-basic"
+                        label="Enter Plan"
+                        variant="outlined"
+                        fullWidth
+                        {...register1("update_plan")}
+                        error={updateErrors?.update_plan}
+                        helperText={updateErrors?.update_plan?.message}
+                      />
+                    </div>
+                  </Grid>
+                </Grid>
+                <div className="btnContainer">
+                  <Button variant="contained" color="primary" type="submit">
+                    Update plan{" "}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleSubmit(handleAddPlans)}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <div className="planFeildContainer">
+                      <TextField
+                        id="outlined-basic"
+                        label="Enter Plan"
+                        variant="outlined"
+                        fullWidth
+                        {...register("plan")}
+                        error={errors.plan}
+                        helperText={errors.plan?.message}
+                      />
+                    </div>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <div className="planFeildContainer">
+                      <TextField
+                        id="outlined-basic"
+                        label="Enter Price"
+                        variant="outlined"
+                        fullWidth
+                        {...register("plan_price")}
+                        error={errors.plan_price}
+                        helperText={errors.plan_price?.message}
+                      />
+                    </div>
+                  </Grid>{" "}
+                  <Grid item xs={6}>
+                    <div className="planFeildContainer">
+                      <TextField
+                        id="outlined-basic"
+                        label="Enter Discount"
+                        variant="outlined"
+                        fullWidth
+                        {...register("plan_discount")}
+                        error={errors.plan_discount}
+                        helperText={errors.plan_discount?.message}
+                      />
+                    </div>
+                  </Grid>{" "}
+                  <Grid item xs={6}>
+                    <div className="planFeildContainer">
+                      <TextField
+                        id="outlined-basic"
+                        label="Enter Advance Amount"
+                        variant="outlined"
+                        fullWidth
+                        {...register("plan_advance")}
+                        error={errors.plan_advance}
+                        helperText={errors.plan_advance?.message}
+                      />
+                    </div>
+                  </Grid>{" "}
+                  <Grid item xs={6}>
+                    <div className="planFeildContainer">
+                      <TextField
+                        id="outlined-basic"
+                        label="Enter Duration in hours"
+                        variant="outlined"
+                        fullWidth
+                        {...register("plan_duration")}
+                        error={errors.plan_duration}
+                        helperText={errors.plan_duration?.message}
+                      />
+                    </div>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button variant="contained" component="label">
+                      Upload
+                      <input
+                        {...register("img_url")}
+                        hidden
+                        accept="image/*"
+                        
+                        type="file"
+                        onChange={(e) => {
+                          setValue("img_url", e.target.files[0]);
+                          console.log("rajesh", errors, e.target.files);
+                        }}
+                        aria-describedby="upload_helper_text"
+                      />
+                    </Button>
+                    <FormHelperText
+                      id="upload_helper_text"
+                      error={errors.img_url}
+                    >
+                      {" "}
+                      {errors.img_url?.message}
+                    </FormHelperText>
+                  </Grid>
+                </Grid>
+                <div className="btnContainer">
+                  <Button variant="contained" color="warning">
+                    reset
+                  </Button>
+                  <Button variant="contained" color="primary" type="submit">
+                    add plan{" "}
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
+
+          <span></span>
         </Box>
       </Modal>
 
@@ -378,7 +601,9 @@ const AdminServicePlan = () => {
                             <Button
                               variant="contained"
                               color="error"
-                              onClick={() => deleteServiceInPlan(service)}
+                              onClick={() =>
+                                deleteServiceInPlan(service, index)
+                              }
                             >
                               delete
                             </Button>
@@ -388,29 +613,50 @@ const AdminServicePlan = () => {
                   </TableBody>
                 </Table>
               </div>
+              <form onSubmit={handleAddServices(addServicesToPlan)}>
+                <Grid container spacing={2}>
+                  <Grid item xs={9} style={{ marginTop: "15px" }}>
+                    <TextField
+                      id="outlined-basic"
+                      label="Add Services"
+                      variant="outlined"
+                      fullWidth
+                      {...register2("add_service")}
+                    />
+                  </Grid>
 
-              <div style={{ marginTop: "15px" }}>
-                <TextField
-                  id="outlined-basic"
-                  label="Add Services"
-                  variant="outlined"
-                  fullWidth
-                  value={addServiceToPlan}
-                  onChange={(e) => setAddServicePlan(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="btnContainer">
-              <Button variant="contained" color="warning">
-                reset
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={addServicesToPlan}
-              >
-                add service{" "}
-              </Button>
+                  <Grid item xs={3}>
+                    <Button variant="contained" component="label">
+                      Upload
+                      <input
+                        {...register2("service_img_url")}
+                        hidden
+                        accept="image/*"
+                        type="file"
+                        onChange={(e) => {
+                          setValue3("service_img_url", e.target.files[0]);
+                        }}
+                      />
+                    </Button>
+                    <FormHelperText
+                      id="upload_helper_text"
+                      error={serviceErrors.service_img_url}
+                    >
+                      {" "}
+                      {serviceErrors.service_img_url?.message}
+                    </FormHelperText>
+                  </Grid>
+                </Grid>
+
+                <div className="btnContainer">
+                  <Button variant="contained" color="warning">
+                    reset
+                  </Button>
+                  <Button variant="contained" color="primary" type="submit">
+                    add service{" "}
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         </Box>
