@@ -1,37 +1,127 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import AdminDashBoard from "./admin";
-import { ProtectedRoute } from "./admin/components/ProtectedRoute";
-import AdmiAppointmentPaymets from "./admin/containers/AdmiAppointmentPaymets";
-import AdmicVehicleCompany from "./admin/containers/AdmicVehicleCompany";
-import AdmicVehicleModal from "./admin/containers/AdmicVehicleModal ";
-import AdminAllUsers from "./admin/containers/AdminAllUsers";
-import CreateAdmin from "./admin/containers/AdminCreateUser";
-import AdminHomeSctionSlidders from "./admin/containers/WebsiteSetting/AdminHomeSctionSettings";
-import AdminServicePlan from "./admin/containers/AdminServicePlan";
-import AdminServicePlanPrice from "./admin/containers/AdminServicePlanPrice";
-import AdmiPaymentModes from "./admin/containers/AdmiPaymentModes";
-import AdmiPaymentStatus from "./admin/containers/AdmiPaymentStatus";
-import AdmiVehicleType from "./admin/containers/AdmiVehicleType";
-import AdminAppointments from "./admin/containers/appointments/AdminAppointments";
-import DashBoard from "./admin/containers/DashBoard";
-import SignIn from "./admin/Login";
-import AdmicVehicleCategory from "./admin/containers/AdminVehicleCategory";
-import BannerWebsite from "./website/BannerWebsite";
 
-import WebCarServices from "./admin/containers/WebsiteSetting/WebCarServicesCard";
-import WebEmployees from "./admin/containers/WebsiteSetting/WebEmployees";
-import WebSiteDetails from "./admin/containers/WebsiteSetting/WebSiteDetails";
-import Notification from "./admin/components/Notification";
+import AdmiAppointmentPaymets from "./containers/AdmiAppointmentPaymets";
+
+import AdminAllUsers from "./containers/AdminAllUsers";
+import CreateAdmin from "./containers/AdminCreateUser";
+import AdminHomeSctionSlidders from "./containers/WebsiteSetting/AdminHomeSctionSettings";
+import AdminServicePlan from "./containers/AdminServicePlan";
+import AdminServiceList from "./containers/AdminServiceList";
+import AdmiPaymentModes from "./containers/AdmiPaymentModes";
+import AdmiPaymentStatus from "./containers/AdmiPaymentStatus";
+
+import AdminAppointments from "./containers/appointments/AdminAppointments";
+import DashBoard from "./containers/DashBoard";
+
+import WebCarServices from "./containers/WebsiteSetting/WebCarServicesCard";
+import WebEmployees from "./containers/WebsiteSetting/WebEmployees";
+import WebSiteDetails from "./containers/WebsiteSetting/WebSiteDetails";
+import Login from "./pages/Login/Login";
+import ProtectedRoute from "./ProtectedRoute";
+import RootLayout from "./layouts/RootLayout";
+import { Box, Typography } from "@mui/material";
+import { useDispatch, useSelector } from "react-redux";
+import { isEmpty } from "lodash";
+import { useEffect, useState } from "react";
+import animationData from "./assets/lottieJson/car.json";
+import Lottie from "./components/Lottie/Lottie";
+
+import { auth, fireStore } from "./containers/firebase";
+import { logInAction } from "./redux/actions/authActions";
+import { collection, getDocs } from "firebase/firestore";
+import { ADMIN, SUPER_ADMIN } from "./utils/constants";
+import { useToasts } from "react-toast-notifications";
+import SendNotification from "./containers/Notifications/SendNotification";
+import ForgotPassWord from "./pages/Login/ForgotPassord";
+import CanceledAppointments from "./containers/appointments/CanceledAppointments";
+import UserEnquires from "./containers/userEnquires/UserEnquires";
+import AdmicVehicleCompany from "./containers/vehicleTypes/AdmicVehicleCompany";
+import AdmicVehicleModal from "./containers/vehicleTypes/AdminVehicleModal";
+import AdminsRolesPermissions from "./containers/admins-management/AdminsRolesPermissions";
+
+const errorToastOption = {
+  appearance: "error",
+  autoDismiss: true,
+  placement: "bottom-center",
+};
 
 function App() {
-  return (
+  const { user } = useSelector((state) => state);
+  const dispatch = useDispatch();
+  const { addToast } = useToasts();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          console.log("ej");
+          const superAdminsCollectionRef = collection(
+            fireStore,
+            "super_admins"
+          );
+          const adminsCollectionRef = collection(fireStore, "admins");
+          const querySnapshotSuperAdmins = getDocs(superAdminsCollectionRef);
+          const querySnapshotAdmins = getDocs(adminsCollectionRef);
+          const res = await Promise.all([
+            querySnapshotSuperAdmins,
+            querySnapshotAdmins,
+          ]);
+          const superAdminUers = {};
+          const adminUsers = {};
+          res[0].forEach((doc) => {
+            const data = doc.data();
+            superAdminUers[data.email] = { id: doc.id, ...data };
+          });
+          res[1].forEach((doc) => {
+            const data = doc.data();
+            adminUsers[data.email] = { id: doc.id, ...data };
+          });
+          if (superAdminUers[user.email]) {
+            dispatch(
+              logInAction({
+                userType: SUPER_ADMIN,
+                userDetails: {
+                  ...user,
+                  id: superAdminUers[user.email]?.id,
+                  admin_name: superAdminUers[user.email]?.admin_name,
+                },
+              })
+            );
+          } else if (adminUsers[user.email]) {
+            dispatch(
+              logInAction({
+                userType: ADMIN,
+                userDetails: {
+                  ...user,
+                  id: adminUsers[user.email]?.id,
+                  admin_name: adminUsers[user.email]?.admin_name,
+                  ...adminUsers[user.email],
+                },
+              })
+            );
+          }
+          setLoading(false);
+        } catch (error) {
+          addToast(error.message, errorToastOption);
+        }
+      } else {
+        setLoading(false);
+      }
+    });
+  }, []);
+
+  return loading ? (
+    <Box sx={{ height: "100vh", display: "grid", placeItems: "center" }}>
+      <Lottie animationData={animationData} height={200} width={300} />
+    </Box>
+  ) : (
     <Routes>
-      <Route path="/" element={<BannerWebsite />} />
       <Route
-        path="/admin"
+        path="/"
         element={
           <ProtectedRoute>
-            <AdminDashBoard />
+            <RootLayout />
           </ProtectedRoute>
         }
       >
@@ -51,27 +141,20 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="users/create-admin"
-          element={
-            <ProtectedRoute>
-              <CreateAdmin />
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="service/service-plan"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute permission={"service_Plan"}>
               <AdminServicePlan />
             </ProtectedRoute>
           }
         />
         <Route
-          path="service/service-plan-price"
+          path="service/service-list"
           element={
-            <ProtectedRoute>
-              <AdminServicePlanPrice />
+            <ProtectedRoute permission={"service_Plan"}>
+              <AdminServiceList />
             </ProtectedRoute>
           }
         />
@@ -84,15 +167,6 @@ function App() {
           }
         />
         <Route
-          path="vehicle/vehicle-category"
-          element={
-            <ProtectedRoute>
-              <AdmicVehicleCategory />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
           path="vehicle/vehicle-model"
           element={
             <ProtectedRoute>
@@ -100,14 +174,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="vehicle/vehicle-type"
-          element={
-            <ProtectedRoute>
-              <AdmiVehicleType />
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="appointment/payments"
           element={
@@ -138,6 +205,15 @@ function App() {
           element={
             <ProtectedRoute>
               <AdmiPaymentStatus />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="appointment/canceled-appointments"
+          element={
+            <ProtectedRoute>
+              <CanceledAppointments />
             </ProtectedRoute>
           }
         />
@@ -175,18 +251,69 @@ function App() {
           }
         />
         <Route
-          path="*"
+          path="admins/admins-roles-permissions"
           element={
-            <div>
-              <h3> Page Not Fuound</h3>
-            </div>
+            <ProtectedRoute onlySuperAdmin={true}>
+              <AdminsRolesPermissions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/send-notification"
+          element={
+            <ProtectedRoute>
+              <SendNotification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user-enquires"
+          element={
+            <ProtectedRoute>
+              <UserEnquires />
+            </ProtectedRoute>
           }
         />
       </Route>
-      {/* <Route path="/" element={<Navigate to="/admin/dashboard" replace />} /> */}
 
-      <Route path="/login" element={<SignIn />} />
-      <Route path="/not" element={<Notification />} />
+      <Route
+        path="/login/:userType"
+        element={
+          !user.isLoggedIn || !user.userType || isEmpty(user.userDetails) ? (
+            <Login />
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
+      <Route
+        path="/"
+        element={
+          !user.isLoggedIn || !user.userType || isEmpty(user.userDetails) ? (
+            <Login />
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          !user.isLoggedIn || !user.userType || isEmpty(user.userDetails) ? (
+            <ForgotPassWord />
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
+      <Route
+        path="*"
+        element={
+          <Box sx={{ display: "grid", placeItems: "center", height: "100vh" }}>
+            <Typography variant="h4"> Page Not Found</Typography>
+          </Box>
+        }
+      />
     </Routes>
   );
 }
