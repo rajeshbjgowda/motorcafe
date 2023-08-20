@@ -47,6 +47,7 @@ import {
 } from "../../components/mui-components/TableComponents";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { uploadFileToFirebase } from "../../utils/functions";
 
 const schema = yup.object().shape({
   heading: yup.string().required("reqired"),
@@ -61,16 +62,6 @@ const AdminHomeSctionSlidders = () => {
   const sliddersRef = collection(fireStore, "slidders");
   const db = getFirestore(app);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    reset,
-  } = useForm({
-    resolver: yupResolver(schema),
-  });
-
   const dispatch = useDispatch();
   const slidders = useSelector((state) => state.homeSectionReducer.slidders);
 
@@ -78,34 +69,20 @@ const AdminHomeSctionSlidders = () => {
     dispatch(getSliddersData());
   }, []);
 
-  const addSlidders = async (data) => {
-    console.log(data.slidder_image.name);
+  const addSlidders = async (e) => {
+    e.preventDefault();
 
-    let imageUrl = "";
-    if (data.slidder_image) {
-      const imageRef = await ref(
-        storage,
-        `slidder_images/${data.slidder_image.name}`
-      );
-
-      await uploadBytes(imageRef, data.slidder_image).then(async (snapshot) => {
-        await getDownloadURL(snapshot.ref).then((url) => {
-          // console.log(typeof url);
-          // setUploadedImage(url);
-          imageUrl = `${url}`;
-        });
-      });
-    }
-    console.log("variable url", imageUrl);
+    const image_url = await uploadFileToFirebase(
+      e.target.slidder_image.files[0]
+    );
 
     if (modelUpdateId) {
       const docRef = doc(db, "slidders", modelUpdateId);
       let Updatedata = {
-        content: data.content,
-        heading: data.heading,
-
-        image: imageUrl,
-        sub_heading: data.sub_heading,
+        content: e.target.content.value,
+        heading: e.target.heading.value,
+        image: image_url,
+        sub_heading: e.target.sub_heading.value,
       };
 
       await updateDoc(docRef, Updatedata)
@@ -117,14 +94,11 @@ const AdminHomeSctionSlidders = () => {
         });
     } else {
       const Details = {
-        content: data.content,
-        heading: data.heading,
-        image: imageUrl,
-        sub_heading: data.sub_heading,
+        content: e.target.content.value,
+        heading: e.target.heading.value,
+        image: image_url,
+        sub_heading: e.target.sub_heading.value,
       };
-
-      console.log(Details, "uploadedimage");
-
       try {
         addDoc(sliddersRef, Details).then(async (res) => {});
       } catch (error) {
@@ -132,7 +106,6 @@ const AdminHomeSctionSlidders = () => {
       }
     }
     dispatch(getSliddersData());
-    reset();
   };
   const deleteSlidder = async (id) => {
     const docRef = doc(db, "slidders", id.toString());
@@ -141,10 +114,9 @@ const AdminHomeSctionSlidders = () => {
 
     dispatch(getSliddersData());
   };
-  console.log(slidders);
   return (
     <div>
-      <form onSubmit={handleSubmit(addSlidders)}>
+      <form onSubmit={addSlidders}>
         <Grid container spacing={2}>
           <Grid item xs={6} style={{ marginTop: "15px" }} alignItems="stretch">
             <TextField
@@ -152,9 +124,7 @@ const AdminHomeSctionSlidders = () => {
               label="Enter Heading"
               variant="outlined"
               fullWidth
-              {...register("heading")}
-              error={errors.heading}
-              helperText={errors.heading?.message}
+              name="heading"
             />
           </Grid>
           <Grid item xs={6} style={{ marginTop: "15px" }}>
@@ -163,9 +133,7 @@ const AdminHomeSctionSlidders = () => {
               label="Enter SubHeading"
               variant="outlined"
               fullWidth
-              {...register("sub_heading")}
-              error={errors.sub_heading}
-              helperText={errors.sub_heading?.message}
+              name="sub_heading"
             />
           </Grid>
           <Grid item xs={6} style={{ marginTop: "15px" }}>
@@ -174,21 +142,19 @@ const AdminHomeSctionSlidders = () => {
               label="Enter Content"
               variant="outlined"
               fullWidth
-              {...register("content")}
-              error={errors.content}
-              helperText={errors.content?.message}
+              name="content"
             />
           </Grid>
 
           <Grid item xs={6} style={{ marginTop: "15px" }}>
             <TextField
-              {...register("slidder_image")}
               variant="outlined"
               fullWidth
               accept="image/*"
               type="file"
-              onChange={(e) => setValue("slidder_image", e.target.files[0])}
+              // onChange={(e) => setValue("slidder_image", e.target.files[0])}
               required
+              name="slidder_image"
             />
           </Grid>
         </Grid>

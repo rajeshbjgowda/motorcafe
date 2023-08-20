@@ -4,7 +4,7 @@ import Menu from "@mui/material/Menu";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const DateRangePickerComp = () => {
+const DateRangePickerComp = ({ handleSetDateRangeForData }) => {
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(null);
   const [anchorEl, setAnchorEl] = React.useState(null);
@@ -17,9 +17,14 @@ const DateRangePickerComp = () => {
   };
   const onChange = (dates) => {
     const [start, end] = dates;
+
+    const startDateSeconds = new Date(start).getTime() / 1000;
+
+    const endDateSeconds = new Date(end).getTime() / 1000;
+
+    handleSetDateRangeForData(startDateSeconds, endDateSeconds);
     setStartDate(start);
     setEndDate(end);
-    console.log(start, end);
     if (end) {
       handleClose();
     }

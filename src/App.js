@@ -55,7 +55,6 @@ function App() {
     auth.onAuthStateChanged(async (user) => {
       if (user) {
         try {
-          console.log("ej");
           const superAdminsCollectionRef = collection(
             fireStore,
             "super_admins"

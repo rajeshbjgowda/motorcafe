@@ -23,8 +23,6 @@ const CreatePlanModal = ({ open, handleClose, updateId }) => {
     setLoading(true);
 
     if (updateId) {
-      console.log("S");
-
       try {
         const data = {
           field_name: e.target.field_name.value,
@@ -42,7 +40,6 @@ const CreatePlanModal = ({ open, handleClose, updateId }) => {
         setLoading(false);
         handleClose();
       } catch (error) {
-        console.log(error);
         setLoading(false);
       }
     } else {
@@ -63,7 +60,6 @@ const CreatePlanModal = ({ open, handleClose, updateId }) => {
         setLoading(false);
         handleClose();
       } catch (error) {
-        console.log(error);
         setLoading(false);
       }
     }

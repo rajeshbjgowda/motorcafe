@@ -126,7 +126,6 @@ const WebSiteDetails = () => {
     reset();
   };
 
-  console.log(garage_Details);
   return (
     <div>
       <form onSubmit={handleSubmit(updateWebDetails)}>

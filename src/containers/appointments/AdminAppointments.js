@@ -32,7 +32,6 @@ import {
   MenuItem,
   Select,
 } from "@mui/material";
-import { async } from "@firebase/util";
 import {
   arrayUnion,
   collection,
@@ -45,14 +44,18 @@ import { app } from "../firebase";
 import { getServicePlanPriceData } from "../../redux/actions/serviceplanprice";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
-import generatePDF, { generateInvoicePdf } from "./generateAppoinmentPdf";
+import generatePDF, {
+  generateInvoicePdf,
+  generateExelSheet,
+} from "./generateAppoinmentPdf";
 import Calendar from "../../components/DateRangePicker";
 import { sendPushNotificationToDeviceTokens } from "../../utils/functions";
 import { LoadingButton } from "@mui/lab";
 import Checkbox from "@mui/material/Checkbox";
-
+import "../styles/tableStyles.scss";
 import axios from "axios";
 import DateRangePickerValue from "../../components/DateRangePicker";
+import CircularProgress from "@mui/material/CircularProgress";
 
 const style = {
   position: "absolute",
@@ -71,6 +74,11 @@ const style = {
 const AdminAppointments = () => {
   const [open, setOpen] = useState(false);
   const [openUserDetailModal, setOpenUserDetailModal] = useState(false);
+  const [refundDetail, setRefundDetail] = useState({
+    open: false,
+    paymetId: "",
+  });
+
   const [userDetails, setUserDetails] = useState({});
   const [loading, setLoading] = useState(false);
   const [appointmentId, setAppointmentId] = useState(null);
@@ -78,9 +86,14 @@ const AdminAppointments = () => {
   const [allServices, setAllServices] = useState([]);
   const [userAdress, setUserAddress] = useState({
     open: false,
-    address: null,
+    paymetId: "",
+    error: "",
+    success: "",
   });
-
+  const [dateRange, setDateRange] = useState({
+    start: 0,
+    end: 0,
+  });
   const [openAddServiceModal, setOpenAddServiceModal] = useState(false);
 
   const db = getFirestore(app);
@@ -143,14 +156,11 @@ const AdminAppointments = () => {
   };
 
   const handleOpenUserModal = (userId) => {
-    console.log("click");
     setOpenUserDetailModal(true);
 
     setUserDetails({
       ...users[userId],
     });
-
-    console.log(users[userId]);
   };
 
   const handleSetAppointmentStatus = async (e, id) => {
@@ -160,7 +170,6 @@ const AdminAppointments = () => {
     });
     dispatch(getAppointmentsData());
   };
-  console.log("appointments", appointments, users);
 
   const handleCreateInvoice = (appointment) => {
     // console.log("handleCreateInvoice", appointment);
@@ -189,8 +198,6 @@ const AdminAppointments = () => {
   };
 
   const handleOrderAccept = async (appointment) => {
-    console.log("handleCreateInvoice", users);
-
     const docRef = doc(db, "appointments", appointment.id);
     await updateDoc(docRef, {
       isOrderAccepted: true,
@@ -225,16 +232,13 @@ const AdminAppointments = () => {
       extra_services: arrayUnion(data),
     })
       .then((docRef) => {
-        console.log("Value of an Existing Document Field has been updated");
         setLoading(false);
       })
       .catch((error) => {
-        console.log(error);
         setLoading(false);
       });
     handleCloseAddServiceModal();
   };
-  console.log("userType", users);
 
   const hadleChangePaymentCollected = async (e, id) => {
     const appointmentRef = doc(db, "appointments", id);
@@ -243,231 +247,351 @@ const AdminAppointments = () => {
     });
     dispatch(getAppointmentsData());
   };
+  const handleSetDateRangeForData = (start, end) => {
+    setDateRange({
+      start,
+      end,
+    });
+  };
+
+  const handleOpenRefundModal = (id) => {
+    setRefundDetail({
+      ...refundDetail,
+      open: true,
+      paymetId: id,
+    });
+  };
+  const handleCloseRefundModal = () => {
+    setRefundDetail({
+      open: false,
+      paymetId: "",
+      error: "",
+      success: "",
+    });
+  };
+
+  const handleRefudToCustomer = (e) => {
+    e.preventDefault();
+    const amount = Number(e.target.refund_amount.value * 100);
+    // e.target.refund_amount.value
+    if (isNaN(amount)) {
+      return;
+    }
+    // razorpayPaymentId, amount,
+
+    const data = {
+      razorpayPaymentId: "pay_MJJsgCydYFJjgM",
+      amount: 100,
+      password: "Refund@76545",
+    };
+    axios
+      .post(
+        "https://us-central1-motorcafe-7ba65.cloudfunctions.net/payment/api/v1/rp/refund/",
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      )
+      .then((res) => {
+        console.log("razorpay", res);
+      })
+      .catch((err) => {
+        console.log("razorpay", err);
+      });
+  };
   return (
     <div className="serviceplanContainer">
       <h1>ALL APPOINTMENTS </h1>
-      <div className="tableContainer">
-        <TableContainer component={Paper}>
-          <Table
-            aria-label="customized table"
-            sx={{ minWidth: 950, overflowX: "scroll" }}
-            id="table-to-xls"
-          >
-            <TableHead>
-              <TableRow>
-                <StyledTableCell align="center">Sl.No</StyledTableCell>
-                <StyledTableCell align="center">User </StyledTableCell>
-                <StyledTableCell align="center"> view User </StyledTableCell>
-
-                <StyledTableCell align="center">Appointment Id</StyledTableCell>
-                <StyledTableCell align="center">
-                  optional service
-                </StyledTableCell>
-                <StyledTableCell align="center"> services</StyledTableCell>
-                <StyledTableCell align="center"> Add Services</StyledTableCell>
-
-                <StyledTableCell align="center"> vehicle id</StyledTableCell>
-                <StyledTableCell align="center">payment id</StyledTableCell>
-                <StyledTableCell align="center">payment status</StyledTableCell>
-                <StyledTableCell align="center">service type</StyledTableCell>
-                <StyledTableCell align="center"> adress</StyledTableCell>
-                <StyledTableCell align="center"> status</StyledTableCell>
-                <StyledTableCell align="center">accept</StyledTableCell>
-                <StyledTableCell align="center">cancel</StyledTableCell>
-                <StyledTableCell align="center">
-                  is payment collected
-                </StyledTableCell>
-
-                <StyledTableCell align="center">bill</StyledTableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {appointments &&
-                appointments.map((appointment, index) => (
-                  <StyledTableRow key={appointment.id}>
-                    <StyledTableCell align="center">
-                      {index + 1}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {users[appointment.user_id]?.username}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        color="primary"
-                        variant="contained"
-                        onClick={() => handleOpenUserModal(appointment.user_id)}
-                        fullWidth
-                        size="small"
-                        sx={{ minWidth: 150 }}
-                      >
-                        View user detail
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.id}
-                    </StyledTableCell>{" "}
-                    <StyledTableCell align="center">
-                      {appointment.optional_service}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        onClick={() => handleOpen(appointment)}
-                      >
-                        services
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        onClick={() =>
-                          handleOpenAddServiceModal(appointment.id)
-                        }
-                      >
-                        add services
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.vehicle_index}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.payments_details?.payment_id}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.payments_details?.payment_status}
-                    </StyledTableCell>{" "}
-                    <StyledTableCell align="center">
-                      {appointment.service_type}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        onClick={() => {
-                          setUserAddress({
-                            open: true,
-                            address:
-                              users[appointment.user_id].address[
-                                appointment.address_index
-                              ],
-                          });
-                        }}
-                      >
-                        view Booked Address
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <FormControl fullWidth>
-                        <InputLabel id="demo-simple-select-label">
-                          status
-                        </InputLabel>
-                        <Select
-                          labelId="demo-simple-select-label"
-                          id="demo-simple-select"
-                          value={appointment.status.toLowerCase()}
-                          label="status"
-                          onChange={(e) =>
-                            handleSetAppointmentStatus(e, appointment.id)
-                          }
-                        >
-                          {appointment.isOrderAccepted && (
-                            <MenuItem value={"accepted"} disabled>
-                              Accepted
-                            </MenuItem>
-                          )}
-
-                          {appointment.isCanceled && (
-                            <MenuItem value={"canceled"} disabled>
-                              Canceled
-                            </MenuItem>
-                          )}
-                          {!(
-                            appointment.isOrderAccepted ||
-                            appointment.isCanceled
-                          ) && <MenuItem value={"booked"}>Booked</MenuItem>}
-
-                          <MenuItem
-                            value={"success"}
-                            disabled={appointment.isCanceled ? true : false}
-                          >
-                            sucess
-                          </MenuItem>
-                          <MenuItem
-                            value={"reject"}
-                            disabled={appointment.isCanceled ? true : false}
-                          >
-                            reject
-                          </MenuItem>
-                        </Select>
-                      </FormControl>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        disabled={
-                          appointment.isOrderAccepted || appointment.isCanceled
-                            ? true
-                            : false
-                        }
-                        onClick={() => handleOrderAccept(appointment)}
-                      >
-                        accept
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        color="error"
-                        onClick={() => handleOrderCanceled(appointment)}
-                        disabled={appointment.isCanceled ? true : false}
-                      >
-                        cancel
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Checkbox
-                        checked={appointment.amount_collected}
-                        onChange={(e) =>
-                          hadleChangePaymentCollected(e, appointment.id)
-                        }
-                        inputProps={{ "aria-label": "controlled" }}
-                      />
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleCreateInvoice(appointment)}
-                      >
-                        Download
-                      </Button>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </div>
-
-      {/* <Calendar /> */}
-
-      <div className="appointmentDetailsBtn">
-        <DateRangePickerValue />
-        <ReactHTMLTableToExcel
-          id="test-table-xls-button"
-          className="download-table-xls-button"
-          table="table-to-xls"
-          filename="tablexls"
-          sheet="tablexls"
-          buttonText="Download as XLS"
-        />
-
-        <Button
-          variant="contained"
-          onClick={() => generatePDF(appointments, users)}
+      {appointments.length <= 0 ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: "50px",
+          }}
         >
-          Generate pdf
-        </Button>
-      </div>
+          <CircularProgress style={{ height: 80, width: 80 }} />
+        </div>
+      ) : (
+        <>
+          <div className="tableContainer">
+            <TableContainer component={Paper} className="tableContainer">
+              <Table
+                aria-label="customized table"
+                sx={{ minWidth: 950, overflowX: "scroll" }}
+                id="table-to-xls"
+              >
+                <TableHead>
+                  <TableRow>
+                    <StyledTableCell align="center">Sl.No</StyledTableCell>
+                    <StyledTableCell align="center">User </StyledTableCell>
+                    <StyledTableCell align="center">
+                      {" "}
+                      view User{" "}
+                    </StyledTableCell>
+
+                    <StyledTableCell align="center">
+                      Appointment Id
+                    </StyledTableCell>
+                    <StyledTableCell align="center">
+                      optional service
+                    </StyledTableCell>
+                    <StyledTableCell align="center"> services</StyledTableCell>
+                    <StyledTableCell
+                      align="center"
+                      style={{ minWidth: "200px" }}
+                    >
+                      {" "}
+                      Add Services
+                    </StyledTableCell>
+
+                    <StyledTableCell align="center">
+                      {" "}
+                      vehicle id
+                    </StyledTableCell>
+                    <StyledTableCell align="center">payment id</StyledTableCell>
+                    <StyledTableCell align="center">
+                      payment status
+                    </StyledTableCell>
+                    <StyledTableCell align="center">
+                      service type
+                    </StyledTableCell>
+                    <StyledTableCell align="center">Created On</StyledTableCell>
+
+                    <StyledTableCell
+                      align="center"
+                      style={{ minWidth: "250px" }}
+                    >
+                      {" "}
+                      Adress
+                    </StyledTableCell>
+                    <StyledTableCell align="center"> Status</StyledTableCell>
+                    <StyledTableCell align="center">Accept</StyledTableCell>
+                    <StyledTableCell align="center">Cancel</StyledTableCell>
+                    <StyledTableCell align="center">
+                      payment collected
+                    </StyledTableCell>
+                    <StyledTableCell align="center">Refund</StyledTableCell>
+
+                    <StyledTableCell align="center">bill</StyledTableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {appointments &&
+                    appointments.map((appointment, index) => (
+                      <StyledTableRow key={appointment.id}>
+                        <StyledTableCell align="center">
+                          {index + 1}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {users[appointment.user_id]?.username}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            color="primary"
+                            variant="contained"
+                            onClick={() =>
+                              handleOpenUserModal(appointment.user_id)
+                            }
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 150 }}
+                          >
+                            View user detail
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.id}
+                        </StyledTableCell>{" "}
+                        <StyledTableCell align="center">
+                          {appointment.optional_service}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            onClick={() => handleOpen(appointment)}
+                          >
+                            services
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            onClick={() =>
+                              handleOpenAddServiceModal(appointment.id)
+                            }
+                            color="secondary"
+                          >
+                            add services
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.vehicle_index}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.payments_details?.payment_id}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.payments_details?.payment_status}
+                        </StyledTableCell>{" "}
+                        <StyledTableCell align="center">
+                          {appointment.service_type}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {new Date(
+                            appointment?.created_on?.seconds * 1000
+                          ).toLocaleString()}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              setUserAddress({
+                                open: true,
+                                address:
+                                  users[appointment.user_id].address[
+                                    appointment.address_index
+                                  ],
+                              });
+                            }}
+                          >
+                            view Booked Address
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <FormControl fullWidth>
+                            <InputLabel id="demo-simple-select-label">
+                              status
+                            </InputLabel>
+                            <Select
+                              labelId="demo-simple-select-label"
+                              id="demo-simple-select"
+                              value={appointment.status.toLowerCase()}
+                              label="status"
+                              onChange={(e) =>
+                                handleSetAppointmentStatus(e, appointment.id)
+                              }
+                            >
+                              {appointment.isOrderAccepted && (
+                                <MenuItem value={"accepted"} disabled>
+                                  Accepted
+                                </MenuItem>
+                              )}
+
+                              {appointment.isCanceled && (
+                                <MenuItem value={"canceled"} disabled>
+                                  Canceled
+                                </MenuItem>
+                              )}
+                              {!(
+                                appointment.isOrderAccepted ||
+                                appointment.isCanceled
+                              ) && <MenuItem value={"booked"}>Booked</MenuItem>}
+
+                              <MenuItem
+                                value={"success"}
+                                disabled={appointment.isCanceled ? true : false}
+                              >
+                                sucess
+                              </MenuItem>
+                              <MenuItem
+                                value={"reject"}
+                                disabled={appointment.isCanceled ? true : false}
+                              >
+                                reject
+                              </MenuItem>
+                            </Select>
+                          </FormControl>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            disabled={
+                              appointment.isOrderAccepted ||
+                              appointment.isCanceled
+                                ? true
+                                : false
+                            }
+                            onClick={() => handleOrderAccept(appointment)}
+                          >
+                            accept
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            color="error"
+                            onClick={() => handleOrderCanceled(appointment)}
+                            disabled={appointment.isCanceled ? true : false}
+                          >
+                            cancel
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Checkbox
+                            checked={appointment.amount_collected}
+                            onChange={(e) =>
+                              hadleChangePaymentCollected(e, appointment.id)
+                            }
+                            inputProps={{ "aria-label": "controlled" }}
+                          />
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() =>
+                              handleOpenRefundModal(
+                                appointment.payments_details?.payment_id
+                              )
+                            }
+                          >
+                            Refund
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => handleCreateInvoice(appointment)}
+                          >
+                            Download
+                          </Button>
+                        </StyledTableCell>
+                      </StyledTableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </div>
+
+          <div className="appointmentDetailsBtn">
+            <DateRangePickerValue
+              handleSetDateRangeForData={handleSetDateRangeForData}
+            />
+
+            <Button
+              variant="contained"
+              onClick={() => generateExelSheet(appointments, dateRange, users)}
+              color="secondary"
+            >
+              Generate EXEL SHEET
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => generatePDF(appointments, dateRange, users)}
+              color="success"
+            >
+              Generate pdf
+            </Button>
+          </div>
+        </>
+      )}
+      {/* <Calendar /> */}
 
       <Modal
         open={open}
@@ -706,6 +830,51 @@ const AdminAppointments = () => {
               loading={loading}
             >
               Save
+            </LoadingButton>
+          </form>
+        </Box>
+      </Modal>
+      <Modal
+        open={refundDetail.open}
+        onClose={handleCloseRefundModal}
+        aria-labelledby="parent-modal-title"
+        aria-describedby="parent-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "white",
+            padding: 4,
+            borderRadius: "5px",
+            minWidth: 500,
+            maxHeight: "95vh",
+            overflowY: "auto",
+          }}
+        >
+          <form onSubmit={handleRefudToCustomer}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  label="Enter Refund Amount"
+                  variant="outlined"
+                  required
+                  fullWidth
+                  type="number"
+                  name="refund_amount"
+                />
+              </Grid>
+            </Grid>
+            <LoadingButton
+              sx={{ mt: 4 }}
+              variant="contained"
+              color="primary"
+              type="submit"
+              loading={loading}
+            >
+              Refund
             </LoadingButton>
           </form>
         </Box>

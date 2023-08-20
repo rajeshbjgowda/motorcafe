@@ -35,7 +35,6 @@ const AddService = ({ open, handleClose, updateServiceId, service }) => {
   };
 
   useEffect(() => {
-    console.log(updateServiceId, service);
     if (updateServiceId && service) {
       setFormData({
         service_name: service.service_name,
@@ -77,7 +76,6 @@ const AddService = ({ open, handleClose, updateServiceId, service }) => {
         setLoading(false);
         handleClose();
       } catch (error) {
-        console.log(error);
         setLoading(false);
       }
     } else {
@@ -105,7 +103,6 @@ const AddService = ({ open, handleClose, updateServiceId, service }) => {
         setLoading(false);
         handleClose();
       } catch (error) {
-        console.log(error);
         setLoading(false);
       }
     }

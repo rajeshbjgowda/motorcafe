@@ -103,7 +103,6 @@ const WebCarServices = () => {
       setLoading(false);
     }
   };
-  console.log(webServices);
   return (
     <div>
       <h1>CAR SERVICES</h1>

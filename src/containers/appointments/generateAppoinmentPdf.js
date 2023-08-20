@@ -2,14 +2,28 @@
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
+import * as FileSaver from "file-saver";
+import * as XLSX from "xlsx";
 // Date Fns is used to format the dates we receive
 // from our API call
 
 // define a generatePDF function that accepts a tickets argument
-const generatePDF = (tickets) => {
+const generatePDF = (appointments, dateRange) => {
   // initialize jsPDF
   const doc = new jsPDF();
+  let filteredData = [];
+  if (dateRange.start) {
+    filteredData = appointments.filter((item) => {
+      const timestamp = item.created_on.seconds; // extract seconds from timestamp
+      if (dateRange.end === null) {
+        return timestamp >= dateRange.start; // check if greater than or equal to start
+      } else {
+        return timestamp >= dateRange.start && timestamp <= dateRange.end; // check if within the range
+      }
+    });
+  } else {
+    filteredData = [...appointments];
+  }
 
   // define the columns we want and their titles
   const tableColumn = [
@@ -26,12 +40,12 @@ const generatePDF = (tickets) => {
   ];
   // define an empty array of rows
   const tableRows = [];
-
   // for each ticket pass all its data into an array
-  tickets.forEach((ticket, index) => {
+  filteredData.forEach((ticket, index) => {
     const ticketData = [
       index + 1,
       ticket.user_id,
+      ticket.id,
       ticket.optional_service,
       ticket.vehicle_index,
       ticket.payments_details?.payment_id,
@@ -40,9 +54,12 @@ const generatePDF = (tickets) => {
       ticket.address_index,
       ticket.status,
     ];
+
     // push each tickcet's info into a row
     tableRows.push(ticketData);
   });
+
+  console.log("filteredData", tableRows, filteredData);
 
   // startY is basically margin-top
   //   doc.autoTable(tableColumn, tableRows, { startY: 20 });
@@ -51,9 +68,8 @@ const generatePDF = (tickets) => {
     body: tableRows,
 
     margin: { top: 20 },
-    bodyStyles: { width: "100%" },
+    bodyStyles: { width: "100%", halign: "center" },
 
-    tableWidth: "wrap",
     theme: "grid",
     styles: {
       fontSize: 7,
@@ -75,13 +91,11 @@ export default generatePDF;
 
 export const generateInvoicePdf = (details, users, allServices) => {
   // app.component.ts
-  console.log("details", details, users[details.user_id]);
+
   const doc = new jsPDF();
   let serviceData = [];
   let totalPrice = 0;
   details.service_ids.forEach((id, index) => {
-    console.log(allServices[id]);
-
     const { service_name, price, discount, advance_price } = allServices[id];
     let actualPrice = Number(price) * ((100 - Number(discount)) / 100);
     totalPrice += actualPrice;
@@ -91,7 +105,7 @@ export const generateInvoicePdf = (details, users, allServices) => {
       price,
       `${discount}%`,
       advance_price,
-      actualPrice,
+      actualPrice.toFixed(2),
     ];
     serviceData.push(data);
   });
@@ -110,7 +124,7 @@ export const generateInvoicePdf = (details, users, allServices) => {
     ];
     serviceData.push(data);
   });
-  console.log("totalPrice", totalPrice);
+
   autoTable(doc, {
     body: [
       [
@@ -274,41 +288,41 @@ export const generateInvoicePdf = (details, users, allServices) => {
     body: [
       [
         {
-          content: "Subtotal:",
+          content: "Subtotal Rs:",
           styles: {
             halign: "right",
           },
         },
         {
-          content: totalPrice,
-          styles: {
-            halign: "right",
-          },
-        },
-      ],
-      [
-        {
-          content: "Total tax:",
-          styles: {
-            halign: "right",
-          },
-        },
-        {
-          content: "$400",
+          content: totalPrice.toFixed(2),
           styles: {
             halign: "right",
           },
         },
       ],
+      // [
+      //   {
+      //     content: "Total tax:",
+      //     styles: {
+      //       halign: "right",
+      //     },
+      //   },
+      //   {
+      //     content: "$400",
+      //     styles: {
+      //       halign: "right",
+      //     },
+      //   },
+      // ],
       [
         {
-          content: "Total amount:",
+          content: "Total amount Rs:",
           styles: {
             halign: "right",
           },
         },
         {
-          content: "$4000",
+          content: totalPrice.toFixed(2),
           styles: {
             halign: "right",
           },
@@ -344,19 +358,79 @@ export const generateInvoicePdf = (details, users, allServices) => {
     theme: "plain",
   });
 
-  autoTable(doc, {
-    body: [
-      [
-        {
-          content: "This is a centered footer",
-          styles: {
-            halign: "center",
-          },
-        },
-      ],
-    ],
-    theme: "plain",
-  });
+  // autoTable(doc, {
+  //   body: [
+  //     [
+  //       {
+  //         content: "This is a centered footer",
+  //         styles: {
+  //           halign: "center",
+  //         },
+  //       },
+  //     ],
+  //   ],
+  //   theme: "plain",
+  // });
   doc.output("dataurlnewwindow");
   // return doc.save("invoice");
+};
+
+export const generateExelSheet = (appointments, dateRange) => {
+  // initialize jsPDF
+  const fileType =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
+  const fileExtension = ".xlsx";
+  let filteredData = [];
+  if (dateRange.start) {
+    filteredData = appointments.filter((item) => {
+      const timestamp = item.created_on.seconds; // extract seconds from timestamp
+      if (dateRange.end === null) {
+        return timestamp >= dateRange.start; // check if greater than or equal to start
+      } else {
+        return timestamp >= dateRange.start && timestamp <= dateRange.end; // check if within the range
+      }
+    });
+  } else {
+    filteredData = [...appointments];
+  }
+
+  // define the columns we want and their titles
+  const tableColumn = [
+    "Sl.No",
+    "User ID",
+    "Appointment Id",
+    "optional service",
+    "vehicle id",
+    "payment id",
+    "payment status",
+    "service type",
+    "address",
+    "status",
+  ];
+
+  const tableRows = [];
+
+  // for each ticket pass all its data into an array
+  filteredData.forEach((ticket, index) => {
+    const ticketData = [
+      index + 1,
+      ticket.user_id,
+      ticket.id,
+      ticket.optional_service,
+      ticket.vehicle_index,
+      ticket.payments_details?.payment_id,
+      ticket.payments_details?.payment_status,
+      ticket.service_type,
+      ticket.address_index,
+      ticket.status,
+    ];
+    // push each tickcet's info into a row
+    tableRows.push(ticketData);
+  });
+
+  const ws = XLSX.utils.json_to_sheet([tableColumn, ...tableRows]);
+  const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
+  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const data = new Blob([excelBuffer], { type: fileType });
+  FileSaver.saveAs(data, "fileName" + fileExtension);
 };

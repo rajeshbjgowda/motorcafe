@@ -5,7 +5,6 @@ import { ADMIN } from "./utils/constants";
 
 const ProtectedRoute = (props) => {
   const { user } = useSelector((state) => state);
-  console.log("user.userType", user.userType);
   const { children } = props;
   if (props.onlySuperAdmin) {
     if (user.userType === "super-admin") {

@@ -14,17 +14,18 @@ import { styled } from "@mui/material/styles";
 
 
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
-    [`&.${tableCellClasses.head}`]: {
-        backgroundColor: "#d9edf7 ",
-        fontWeight: "700",
-        padding: "15px 10px",
-        "&.MuiTableCell-head": {
-            minWidth: "100px",
-        },
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: "#d9edf7 ",
+    fontWeight: "700",
+    padding: "15px 10px",
+    "&.MuiTableCell-head": {
+      minWidth: "150px",
+      textTransform: "capitalize",
     },
-    [`&.${tableCellClasses.body}`]: {
-        fontSize: 14,
-    },
+  },
+  [`&.${tableCellClasses.body}`]: {
+    fontSize: 14,
+  },
 }));
 
 export const StyledTableRow = styled(TableRow)(({ theme }) => ({

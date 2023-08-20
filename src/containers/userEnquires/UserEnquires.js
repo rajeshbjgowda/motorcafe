@@ -38,7 +38,6 @@ const UserEnquires = () => {
     dispatch(getUsersData());
     dispatch(getServiceListData());
   }, []);
-  console.log("enquires", enquires);
 
   const handleClose = () => {
     setReplyModal({
@@ -70,7 +69,6 @@ const UserEnquires = () => {
       setLoading(false);
       handleClose();
     } catch (err) {
-      console.log(err);
       handleClose();
       setLoading(false);
     }

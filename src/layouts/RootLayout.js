@@ -49,7 +49,6 @@ function RootLayout() {
     setOpen(!open);
   };
 
-  console.log("state", userDetails);
   return (
     <Box sx={{ display: "flex" }}>
       <MiniDrawer

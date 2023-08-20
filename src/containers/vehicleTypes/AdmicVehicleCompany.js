@@ -32,12 +32,18 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  Timestamp,
   updateDoc,
 } from "firebase/firestore";
 import { async } from "@firebase/util";
 import { useDispatch, useSelector } from "react-redux";
 import { StyledTableCell } from "../../components/mui-components/TableComponents";
 import { getVehicleCompanyData } from "../../redux/actions/AdminVehicleCompany";
+import { getComparator, stableSort } from "../../utils/sorting Functions";
+import EnhancedTableHead from "../../components/mui-components/EnhancedTableHead";
+import { vehicleCompanyheadCells } from "../../utils/TableHeadContsants";
+import TablePaginationActions from "@mui/material/TablePagination/TablePaginationActions";
+import TablePagination from "@mui/material/TablePagination";
 
 const style = {
   position: "absolute",
@@ -62,6 +68,9 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
     border: 0,
   },
 }));
+const DEFAULT_ORDER = "asc";
+const DEFAULT_ORDER_BY = "company_name";
+const DEFAULT_ROWS_PER_PAGE = 5;
 const AdmicVehicleCompany = () => {
   const [open, setOpen] = React.useState(false);
   const [disable, setDisable] = React.useState(false);
@@ -71,6 +80,16 @@ const AdmicVehicleCompany = () => {
   const [vehicalModelList, setVehicalModelList] = useState([]);
   const [modelUpdateId, setModelUpdateId] = useState("");
   const vehicleCompanyRef = collection(fireStore, "vehicle_company");
+
+  //sorting state
+  const [selected, setSelected] = useState([]);
+
+  const [order, setOrder] = React.useState("");
+  const [dateSort, setDateSort] = React.useState(false);
+  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [page, setPage] = React.useState(0);
+  const [orderBy, setOrderBy] = React.useState("");
+  const [visibleRows, setVisibleRows] = React.useState(null);
 
   const { loading, error, vehicleCompanies } = useSelector(
     (state) => state.adminVehicleCompanyReducer
@@ -85,6 +104,18 @@ const AdmicVehicleCompany = () => {
     dispatch(getVehicleCompanyData());
   }, []);
 
+  useEffect(() => {
+    let rowsOnMount = stableSort(
+      vehicleCompanies,
+      getComparator(DEFAULT_ORDER, DEFAULT_ORDER_BY)
+    );
+    rowsOnMount = rowsOnMount.slice(
+      0 * DEFAULT_ROWS_PER_PAGE,
+      0 * DEFAULT_ROWS_PER_PAGE + DEFAULT_ROWS_PER_PAGE
+    );
+    setVisibleRows(rowsOnMount);
+  }, [vehicleCompanies]);
+
   const handleOpen = () => {
     setOpen(true);
   };
@@ -97,7 +128,7 @@ const AdmicVehicleCompany = () => {
     if (modelUpdateId) {
       const docRef = doc(fireStore, "vehicle_company", modelUpdateId);
       let data = {
-        updatedAt: new Date().toUTCString(),
+        updatedAt: Timestamp.fromDate(new Date()),
         company_name: vehicleCompany,
       };
 
@@ -111,8 +142,8 @@ const AdmicVehicleCompany = () => {
       setDisable(false);
     } else {
       const Details = {
-        created_at: new Date().toUTCString(),
-        updatedAt: new Date().toUTCString(),
+        created_at: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
         company_name: vehicleCompany,
       };
 
@@ -152,8 +183,71 @@ const AdmicVehicleCompany = () => {
     await updateDoc(cmpanyRef, data);
     dispatch(getVehicleCompanyData());
   };
-  console.log("vehicleCompanies", vehicleCompanies, loading, error);
 
+  const handleChangePage = React.useCallback((event, newPage) => {
+    setPage(newPage);
+
+    const sortedRows = stableSort(
+      vehicleCompanies,
+      getComparator(order, orderBy, dateSort),
+      dateSort
+    );
+    const updatedRows = sortedRows.slice(
+      newPage * rowsPerPage,
+      newPage * rowsPerPage + rowsPerPage
+    );
+
+    setVisibleRows(updatedRows);
+
+    // Avoid a layout jump when reaching the last page with empty rows.
+    const numEmptyRows =
+      newPage > 0
+        ? Math.max(0, (1 + newPage) * rowsPerPage - vehicleCompanies.length)
+        : 0;
+  }, []);
+
+  const handleChangeRowsPerPage = React.useCallback(
+    (event) => {
+      const updatedRowsPerPage = parseInt(event.target.value, 10);
+      setRowsPerPage(updatedRowsPerPage);
+      setPage(0);
+      const sortedRows = stableSort(
+        vehicleCompanies,
+        getComparator(order, orderBy, dateSort),
+        dateSort
+      );
+      const updatedRows = sortedRows.slice(
+        0 * updatedRowsPerPage,
+        0 * updatedRowsPerPage + updatedRowsPerPage
+      );
+      setVisibleRows(updatedRows);
+      // There is no layout jump to handle on the first page.
+    },
+    [order, orderBy]
+  );
+
+  const handleRequestSort = React.useCallback(
+    (event, newOrderBy, dateSort) => {
+      setDateSort(dateSort);
+      const isAsc = orderBy === newOrderBy && order === "asc";
+      const toggledOrder = isAsc ? "desc" : "asc";
+      setOrder(toggledOrder);
+      setOrderBy(newOrderBy);
+
+      const sortedRows = stableSort(
+        vehicleCompanies,
+        getComparator(toggledOrder, newOrderBy, dateSort),
+        dateSort
+      );
+      const updatedRows = sortedRows.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+      );
+
+      setVisibleRows(updatedRows);
+    },
+    [order, orderBy, page, rowsPerPage]
+  );
   return (
     <div className="serviceplanContainer">
       <h1>VEHICAL COMPANIES</h1>
@@ -183,24 +277,17 @@ const AdmicVehicleCompany = () => {
               aria-label="customized table"
               sx={{ minWidth: 650, overflowX: "scroll" }}
             >
-              <TableHead>
-                <TableRow>
-                  <StyledTableCell align="center">Sl.No</StyledTableCell>
-
-                  <StyledTableCell align="center">
-                    Vehical company
-                  </StyledTableCell>
-
-                  <StyledTableCell align="center">Created AT</StyledTableCell>
-                  <StyledTableCell align="center">UpdatedAt</StyledTableCell>
-                  <StyledTableCell align="center">Edit</StyledTableCell>
-                  {/* <StyledTableCell align="center">Delete</StyledTableCell> */}
-                  <StyledTableCell align="center">state</StyledTableCell>
-                </TableRow>
-              </TableHead>
+              <EnhancedTableHead
+                numSelected={selected.length}
+                order={order}
+                orderBy={orderBy}
+                onRequestSort={handleRequestSort}
+                rowCount={vehicleCompanies.length}
+                headCells={vehicleCompanyheadCells}
+              />
               <TableBody>
-                {vehicleCompanies &&
-                  vehicleCompanies.map((company, index) => (
+                {visibleRows &&
+                  visibleRows.map((company, index) => (
                     <StyledTableRow key={company.id}>
                       <StyledTableCell align="center">
                         {index + 1}
@@ -209,10 +296,14 @@ const AdmicVehicleCompany = () => {
                         {company.company_name}
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        {company.created_at}
+                        {new Date(
+                          company?.created_at?.seconds * 1000
+                        ).toLocaleString()}
                       </StyledTableCell>{" "}
                       <StyledTableCell align="center">
-                        {company.updatedAt}
+                        {new Date(
+                          company?.updatedAt?.seconds * 1000
+                        ).toLocaleString()}
                       </StyledTableCell>{" "}
                       <StyledTableCell
                         align="center"
@@ -246,6 +337,16 @@ const AdmicVehicleCompany = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={vehicleCompanies.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
         </div>
       )}
 

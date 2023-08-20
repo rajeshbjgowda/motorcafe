@@ -97,7 +97,6 @@ const schema = yup.object().shape({
   img_url: yup
     .mixed()
     .test("required", "You need to provide a file", (value) => {
-      console.log("rajesh", value);
       return value && value.length;
     })
     .test("fileSize", "The file is too large", (value, context) => {
@@ -171,7 +170,6 @@ const AdminServicePlan = () => {
     dispatch(getServicePlanData());
     dispatch(getServicePlanPriceData());
     dispatch(getServiceListData());
-    console.log("visibleRows2", servicePlans);
   }, []);
 
   useEffect(() => {
@@ -183,7 +181,7 @@ const AdminServicePlan = () => {
       0 * DEFAULT_ROWS_PER_PAGE,
       0 * DEFAULT_ROWS_PER_PAGE + DEFAULT_ROWS_PER_PAGE
     );
-    console.log("visibleRows,rowsOnMount", rowsOnMount, rowsOnMount);
+
     setVisibleRows(rowsOnMount);
   }, [servicePlans]);
 
@@ -216,9 +214,8 @@ const AdminServicePlan = () => {
     dispatch(getServicePlanPriceData());
   };
 
-  console.log("service_list", service_list);
+ 
   const handleActiveState = (e, id) => {
-    console.log("modal", e.target.checked);
     const planRef = doc(fireStore, "plan", id.toString());
 
     let data = {
@@ -273,7 +270,6 @@ const AdminServicePlan = () => {
 
   const handleRequestSort = React.useCallback(
     (event, newOrderBy, dateSort) => {
-      console.log("orderbe", newOrderBy);
       setDateSort(dateSort);
       const isAsc = orderBy === newOrderBy && order === "asc";
       const toggledOrder = isAsc ? "desc" : "asc";

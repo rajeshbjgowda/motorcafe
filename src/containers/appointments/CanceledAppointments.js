@@ -73,7 +73,6 @@ const CanceledAppointments = () => {
     address: null,
   });
 
-  const [canceledAppointments, setCanceledAppointments] = useState([]);
 
   const db = getFirestore(app);
 
@@ -123,14 +122,11 @@ const CanceledAppointments = () => {
   };
 
   const handleOpenUserModal = (userId) => {
-    console.log("click");
     setOpenUserDetailModal(true);
 
     setUserDetails({
       ...users[userId],
     });
-
-    console.log(users[userId]);
   };
 
   const handleSetAppointmentStatus = async (e, id) => {
@@ -140,43 +136,7 @@ const CanceledAppointments = () => {
     });
     dispatch(getAppointmentsData());
   };
-  console.log("appointments", appointments, users);
-
-  const handleCreateInvoice = (appointment) => {
-    console.log("handleCreateInvoice", appointment);
-    console.log("handleCreateInvoice", users[appointment.user_id].fcm_token);
-
-    let notificationDetail = {
-      to: users[appointment.user_id].fcm_token,
-      data: {
-        title: "Portugal vs. Denmark",
-        body: "great match!",
-      },
-    };
-    sendPushNotificationToDeviceTokens(notificationDetail);
-    // generateInVoice();
-  };
-
-  const handleOrderAccept = async (appointment) => {
-    console.log("handleCreateInvoice", users);
-
-    const docRef = doc(db, "appointments", appointment.id);
-    await updateDoc(docRef, {
-      isOrderAccepted: true,
-      status: "accepted",
-    });
-    dispatch(getAppointmentsData());
-  };
-
-  useEffect(() => {
-    let appointmentList = appointments.filter(
-      (item) => item.isCanceled === true
-    );
-
-    setCanceledAppointments([...appointmentList]);
-  }, []);
-
-  console.log("userType", users);
+  console.log("appointments", appointments);
   return (
     <div className="serviceplanContainer">
       <h1>CANCELED APPOINTMENTS </h1>
@@ -207,98 +167,104 @@ const CanceledAppointments = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {canceledAppointments &&
-                canceledAppointments.map((appointment, index) => (
-                  <StyledTableRow key={appointment.id}>
-                    <StyledTableCell align="center">
-                      {index + 1}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {users[appointment.user_id]?.username}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        color="primary"
-                        variant="contained"
-                        onClick={() => handleOpenUserModal(appointment.user_id)}
-                        fullWidth
-                        size="small"
-                        sx={{ minWidth: 150 }}
-                      >
-                        View user detail
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.id}
-                    </StyledTableCell>{" "}
-                    <StyledTableCell align="center">
-                      {appointment.optional_service}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        onClick={() => handleOpen(appointment)}
-                      >
-                        services
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.vehicle_index}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.payments_details?.payment_id}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {appointment.payments_details?.payment_status}
-                    </StyledTableCell>{" "}
-                    <StyledTableCell align="center">
-                      {appointment.service_type}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        onClick={() => {
-                          setUserAddress({
-                            open: true,
-                            address:
-                              users[appointment.user_id].address[
-                                appointment.address_index
-                              ],
-                          });
-                        }}
-                      >
-                        view Booked Address
-                      </Button>
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <FormControl fullWidth>
-                        <InputLabel id="demo-simple-select-label">
-                          status
-                        </InputLabel>
-                        <Select
-                          labelId="demo-simple-select-label"
-                          id="demo-simple-select"
-                          value={appointment.status}
-                          label="status"
-                          onChange={(e) =>
-                            handleSetAppointmentStatus(e, appointment.id)
-                          }
-                        >
-                          {appointment.isOrderAccepted && (
-                            <MenuItem value={"accepted"} disabled>
-                              Accepted
-                            </MenuItem>
-                          )}
-                          {appointment.isCanceled && (
-                            <MenuItem value={"accepted"} disabled selected>
-                              Cancelled
-                            </MenuItem>
-                          )}
-                        </Select>
-                      </FormControl>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                ))}
+              {appointments &&
+                appointments.map((appointment, index) => {
+                  if (appointment.isCanceled) {
+                    return (
+                      <StyledTableRow key={appointment.id}>
+                        <StyledTableCell align="center">
+                          {index + 1}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {users[appointment.user_id]?.username}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            color="primary"
+                            variant="contained"
+                            onClick={() =>
+                              handleOpenUserModal(appointment.user_id)
+                            }
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 150 }}
+                          >
+                            View user detail
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.id}
+                        </StyledTableCell>{" "}
+                        <StyledTableCell align="center">
+                          {appointment.optional_service}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            onClick={() => handleOpen(appointment)}
+                          >
+                            services
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.vehicle_index}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.payments_details?.payment_id}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {appointment.payments_details?.payment_status}
+                        </StyledTableCell>{" "}
+                        <StyledTableCell align="center">
+                          {appointment.service_type}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              setUserAddress({
+                                open: true,
+                                address:
+                                  users[appointment.user_id].address[
+                                    appointment.address_index
+                                  ],
+                              });
+                            }}
+                          >
+                            view Booked Address
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <FormControl fullWidth>
+                            <InputLabel id="demo-simple-select-label">
+                              status
+                            </InputLabel>
+                            <Select
+                              labelId="demo-simple-select-label"
+                              id="demo-simple-select"
+                              value={appointment.status}
+                              label="status"
+                              onChange={(e) =>
+                                handleSetAppointmentStatus(e, appointment.id)
+                              }
+                            >
+                              {appointment.isOrderAccepted && (
+                                <MenuItem value={"accepted"} disabled>
+                                  Accepted
+                                </MenuItem>
+                              )}
+                              {appointment.isCanceled && (
+                                <MenuItem value={"canceled"} disabled selected>
+                                  Cancelled
+                                </MenuItem>
+                              )}
+                            </Select>
+                          </FormControl>
+                        </StyledTableCell>
+                      </StyledTableRow>
+                    );
+                  }
+                })}
             </TableBody>
           </Table>
         </TableContainer>

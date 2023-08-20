@@ -12,7 +12,6 @@ export const getServiceListData = () => {
     let details = await getDocs(servicesRef);
     let services = {};
     details.forEach((doc) => {
-      console.log("doc", doc.data());
       services = {
         ...services,
         [doc.id]: {

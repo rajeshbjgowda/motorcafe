@@ -30,6 +30,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  Timestamp,
   updateDoc,
 } from "firebase/firestore";
 import { async } from "@firebase/util";
@@ -38,6 +39,10 @@ import { StyledTableCell } from "../../components/mui-components/TableComponents
 import { getVehicleCompanyData } from "../../redux/actions/AdminVehicleCompany";
 import Grid from "@mui/material/Grid";
 import { getVehicleModalData } from "../../redux/actions/AdminVehicleModal";
+import { getComparator, stableSort } from "../../utils/sorting Functions";
+import EnhancedTableHead from "../../components/mui-components/EnhancedTableHead";
+import { vehicleModalheadCells } from "../../utils/TableHeadContsants";
+import TablePagination from "@mui/material/TablePagination";
 
 const style = {
   position: "absolute",
@@ -62,6 +67,9 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
     border: 0,
   },
 }));
+const DEFAULT_ORDER = "asc";
+const DEFAULT_ORDER_BY = "company_name";
+const DEFAULT_ROWS_PER_PAGE = 5;
 const AdmicVehicleModal = () => {
   const [open, setOpen] = React.useState(false);
   const [disable, setDisable] = React.useState(false);
@@ -75,6 +83,17 @@ const AdmicVehicleModal = () => {
 
   const [modelUpdateId, setModelUpdateId] = useState("");
   const vehicleModalRef = collection(fireStore, "vehicleModel");
+  //sorting state
+
+  const [selected, setSelected] = useState([]);
+  const [order, setOrder] = React.useState("");
+  const [dateSort, setDateSort] = React.useState(false);
+  const [numericSort, setNumbericSort] = React.useState(false);
+
+  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [page, setPage] = React.useState(0);
+  const [orderBy, setOrderBy] = React.useState("");
+  const [visibleRows, setVisibleRows] = React.useState(null);
 
   const { vehicleCompanies } = useSelector(
     (state) => state.adminVehicleCompanyReducer
@@ -93,6 +112,17 @@ const AdmicVehicleModal = () => {
     dispatch(getVehicleModalData());
   }, []);
 
+  useEffect(() => {
+    let rowsOnMount = stableSort(
+      vehicleModals,
+      getComparator(DEFAULT_ORDER, DEFAULT_ORDER_BY)
+    );
+    rowsOnMount = rowsOnMount.slice(
+      0 * DEFAULT_ROWS_PER_PAGE,
+      0 * DEFAULT_ROWS_PER_PAGE + DEFAULT_ROWS_PER_PAGE
+    );
+    setVisibleRows(rowsOnMount);
+  }, [vehicleModals]);
   const handleOpen = () => {
     setOpen(true);
   };
@@ -101,15 +131,13 @@ const AdmicVehicleModal = () => {
   };
 
   const handleAddModel = async (e) => {
-    console.log("submitting");
     e.preventDefault();
-    console.log("submitting1");
 
     setDisable(true);
     if (modelUpdateId) {
       const docRef = doc(fireStore, "vehicleModel", modelUpdateId);
       let data = {
-        updatedAt: new Date().toUTCString(),
+        updatedAt: Timestamp.fromDate(new Date()),
         company_name: vehicleModal,
       };
 
@@ -123,8 +151,8 @@ const AdmicVehicleModal = () => {
       setDisable(false);
     } else {
       const Details = {
-        created_at: new Date().toUTCString(),
-        updatedAt: new Date().toUTCString(),
+        created_at: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
         company_name: companyName,
         fuel_type: fuelType,
         variant: variant,
@@ -134,7 +162,6 @@ const AdmicVehicleModal = () => {
 
       try {
         await addDoc(vehicleModalRef, Details);
-        console.log("modal", Details);
       } catch (error) {
         console.log(error);
       }
@@ -163,7 +190,7 @@ const AdmicVehicleModal = () => {
 
   const handleActiveState = async (e, id) => {
     const modalRef = await doc(fireStore, "vehicleModel", id.toString());
-    console.log("modal", e.target.checked, vehicleModals[0]);
+
     let data = {
       isActive: e.target.checked,
     };
@@ -171,14 +198,72 @@ const AdmicVehicleModal = () => {
     await dispatch(getVehicleModalData());
   };
 
-  console.log("vehicleCompanies", vehicleModals, loading, error);
+  const handleChangePage = React.useCallback((event, newPage) => {
+    setPage(newPage);
 
-  let companies = {};
-  vehicleCompanies.forEach((item) => {
-    companies = { ...companies, [item.id]: { ...item } };
-  });
+    const sortedRows = stableSort(
+      vehicleModals,
+      getComparator(order, orderBy, dateSort, numericSort),
+      dateSort
+    );
+    const updatedRows = sortedRows.slice(
+      newPage * rowsPerPage,
+      newPage * rowsPerPage + rowsPerPage
+    );
 
-  console.log("modal", vehicleModals);
+    setVisibleRows(updatedRows);
+
+    // Avoid a layout jump when reaching the last page with empty rows.
+    const numEmptyRows =
+      newPage > 0
+        ? Math.max(0, (1 + newPage) * rowsPerPage - vehicleModals.length)
+        : 0;
+  }, []);
+
+  const handleChangeRowsPerPage = React.useCallback(
+    (event) => {
+      const updatedRowsPerPage = parseInt(event.target.value, 10);
+      setRowsPerPage(updatedRowsPerPage);
+      setPage(0);
+      const sortedRows = stableSort(
+        vehicleModals,
+        getComparator(order, orderBy, dateSort, numericSort),
+        dateSort
+      );
+      const updatedRows = sortedRows.slice(
+        0 * updatedRowsPerPage,
+        0 * updatedRowsPerPage + updatedRowsPerPage
+      );
+      setVisibleRows(updatedRows);
+      // There is no layout jump to handle on the first page.
+    },
+    [order, orderBy]
+  );
+
+  const handleRequestSort = React.useCallback(
+    (event, newOrderBy, dateSort, numeric) => {
+      setDateSort(dateSort);
+      setNumbericSort(numeric);
+      const isAsc = orderBy === newOrderBy && order === "asc";
+      const toggledOrder = isAsc ? "desc" : "asc";
+      setOrder(toggledOrder);
+      setOrderBy(newOrderBy);
+
+      const sortedRows = stableSort(
+        vehicleModals,
+        getComparator(toggledOrder, newOrderBy, dateSort, numeric),
+        dateSort
+      );
+      const updatedRows = sortedRows.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+      );
+
+      setVisibleRows(updatedRows);
+    },
+    [order, orderBy, page, rowsPerPage]
+  );
+
   return (
     <div className="serviceplanContainer">
       <h1>VEHICAL COMPANIES</h1>
@@ -206,33 +291,23 @@ const AdmicVehicleModal = () => {
               aria-label="customized table"
               sx={{ minWidth: 650, overflowX: "scroll" }}
             >
-              <TableHead>
-                <TableRow>
-                  <StyledTableCell align="center">Sl.No</StyledTableCell>
-
-                  <StyledTableCell align="center">
-                    Vehical company
-                  </StyledTableCell>
-                  <StyledTableCell align="center">Modal Name</StyledTableCell>
-                  <StyledTableCell align="center">Variant</StyledTableCell>
-                  <StyledTableCell align="center">Fuel Type</StyledTableCell>
-                  <StyledTableCell align="center">Vehicle Type</StyledTableCell>
-                  <StyledTableCell align="center">Created AT</StyledTableCell>
-                  <StyledTableCell align="center">UpdatedAt</StyledTableCell>
-                  <StyledTableCell align="center">Edit</StyledTableCell>
-                  {/* <StyledTableCell align="center">Delete</StyledTableCell> */}
-                  <StyledTableCell align="center">state</StyledTableCell>
-                </TableRow>
-              </TableHead>
+              <EnhancedTableHead
+                numSelected={selected.length}
+                order={order}
+                orderBy={orderBy}
+                onRequestSort={handleRequestSort}
+                rowCount={vehicleModals.length}
+                headCells={vehicleModalheadCells}
+              />
               <TableBody>
-                {vehicleModals &&
-                  vehicleModals.map((modal, index) => (
+                {visibleRows &&
+                  visibleRows.map((modal, index) => (
                     <StyledTableRow key={modal.id}>
                       <StyledTableCell align="center">
                         {index + 1}
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        {companies[modal.company_name].company_name}
+                        {modal.company_name}
                         {/* {company.company_name} */}
                       </StyledTableCell>
                       <StyledTableCell align="center">
@@ -248,10 +323,14 @@ const AdmicVehicleModal = () => {
                         {modal.vehicle_type}
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        {modal.created_at}
+                        {new Date(
+                          modal?.created_at?.seconds * 1000
+                        ).toLocaleString()}
                       </StyledTableCell>{" "}
                       <StyledTableCell align="center">
-                        {modal.updatedAt}
+                        {new Date(
+                          modal?.updatedAt?.seconds * 1000
+                        ).toLocaleString()}
                       </StyledTableCell>{" "}
                       <StyledTableCell
                         align="center"
@@ -285,6 +364,16 @@ const AdmicVehicleModal = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={vehicleModals.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
         </div>
       )}
       <Modal

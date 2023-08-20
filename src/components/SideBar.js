@@ -64,7 +64,6 @@ export default function MiniDrawer(props) {
         console.log(error);
       });
   };
-  console.log("sidebar user", user, user.userType);
   return (
     <>
       <CssBaseline />
@@ -118,7 +117,7 @@ export default function MiniDrawer(props) {
           </div>
 
           <div className="navItem">
-            <Link to={"/"}>
+            <Link to={"/dashboard"}>
               <div className="list">
                 <span className="listIcon">
                   <DashboardIcon />

@@ -17,6 +17,7 @@ import {
 } from "firebase/functions";
 import { app } from "./firebase";
 
+
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: "#d9edf7 ",
@@ -59,16 +60,27 @@ const allUsers = [
 
 const AdminAllUsers = () => {
   const functions = getFunctions(app, "us-central1");
-  const callableReturnMessage = httpsCallable(functions, "helloMoto");
+  const alive = httpsCallable(functions, "fetchMultipleRefundsByPaymentId");
   connectFunctionsEmulator(functions, "localhost", 5001);
   const handleCLick = () => {
-    callableReturnMessage()
+    alive({ text: "messageText" })
       .then((result) => {
-        console.log(result);
+        // Read result of the Cloud Function.
+        /** @type {any} */
+        const data = result.data;
+        const sanitizedMessage = data.text;
       })
-      .catch((error) => {
-        console.log(`error: ${JSON.stringify(error)}`);
+      .catch((Err) => {
+        console.log(Err);
       });
+    // axios
+    //   .get("https://us-central1-motorcafe-7ba65.cloudfunctions.net/alive")
+    //   .then((res) => {
+    //     console.log(res);
+    //   })
+    //   .catch((err) => {
+    //     console.log(err);
+    //   });
   };
   return (
     <div className="container">

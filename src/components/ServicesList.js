@@ -148,7 +148,6 @@ const ServicesList = ({ open, planId, handleClose }) => {
                           <StyledTableCell align="center">
                             <Button
                               onClick={() => {
-                                console.log("service", service);
                                 setOpenAddService({
                                   open: true,
                                   plan: null,

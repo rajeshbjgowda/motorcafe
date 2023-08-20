@@ -23,10 +23,8 @@ export const getUsersEnquiresData = () => {
 
     let users = [];
     details.forEach((doc) => {
-      console.log("enquires", doc.data());
       users = [...users, { id: doc.id, ...doc.data() }];
     });
-    console.log("enquires", users);
 
     dispatch(getUsersEnquires(users));
   };

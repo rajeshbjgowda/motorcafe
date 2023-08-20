@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "motorcafe-7ba65"
-  }
+  },
+  "targets": {
+    "motorcafe-7ba65": {
+      "hosting": {
+        "admin": [
+          "motor-cafe-admin"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

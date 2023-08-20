@@ -3,7 +3,7 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-
+import { getFunctions } from "firebase/functions";
 const firebaseConfig = {
   apiKey: "AIzaSyA4D8qz8m-Fhnbv8B24OqASX7fJQ4cVUaM",
   authDomain: "motorcafe-7ba65.firebaseapp.com",
@@ -21,6 +21,7 @@ export const storage = getStorage(app);
 export const fireStore = getFirestore(app);
 export const auth = getAuth(app);
 export const messaging = getMessaging(app);
+export const functions = getFunctions(app);
 
 export const fetchToken = async (setTokenFound) => {
   try {

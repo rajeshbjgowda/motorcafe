@@ -8,10 +8,7 @@ export const sendPushNotificationToDeviceTokens = async ({
   to,
   data,
 }) => {
-  console.log("sendPushNotificationToDeviceTokens");
   try {
-    console.log("sendPushNotificationToDeviceTokens2");
-
     // const headers = new Headers();
     // headers.append("Content-Type", "application/json");
     // headers.append(

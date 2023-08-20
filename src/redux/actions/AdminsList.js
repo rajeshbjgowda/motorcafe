@@ -23,17 +23,14 @@ export const getAdminListData = () => {
       const vehicleCompanyRef = collection(fireStore, "admins");
       let details = await getDocs(vehicleCompanyRef);
       let adminsList = [];
-      console.log("details", details.length);
-      details.forEach((doc) => {
-        console.log("details", doc.data());
 
+      details.forEach((doc) => {
         adminsList = [...adminsList, { id: doc.id, ...doc.data() }];
       });
 
       dispatch(getAdminList([...adminsList]));
       // dispatch(getVehicleCompanyLoading(false));
     } catch (error) {
-      console.log(error);
       dispatch(getAdminListError("somthing went wrong"));
       // getVehicleCompanyLoading(false);
     }

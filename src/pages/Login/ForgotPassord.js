@@ -70,16 +70,12 @@ export default function ForgotPassWord() {
     });
 
     if (admin.includes(email) || super_admin.includes(email)) {
-      console.log(admin, super_admin);
-
       sendPasswordResetEmail(auth, email)
         .then(() => {
-          console.log("Password reset email sent!");
           //   addToast("User Does Not Exits", errorToastOption);
           navigate("/login/super-admin");
         })
         .catch((error) => {
-          console.log("Unable to send reset password link :: " + error.message);
           addToast("Something went wrong", errorToastOption);
         });
       setLoading(false);

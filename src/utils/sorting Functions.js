@@ -1,5 +1,4 @@
 export function stableSort(array, comparator, dateSort) {
-  console.log("dateSort", dateSort, array);
   const stabilizedThis = array.map((el, index) => [el, index]);
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -9,13 +8,10 @@ export function stableSort(array, comparator, dateSort) {
     return a[1] - b[1];
   });
 
-  console.log("stabilizedThis", stabilizedThis);
   return stabilizedThis.map((el) => el[0]);
 }
 
 function descendingComparator(a, b, orderBy, dateSort, numericSort) {
-  console.log("descendingComparator", a, b, orderBy);
-
   let firstValue;
   let secondValue;
 
@@ -26,8 +22,8 @@ function descendingComparator(a, b, orderBy, dateSort, numericSort) {
     firstValue = Number(a[orderBy]);
     secondValue = Number(b[orderBy]);
   } else {
-    firstValue = a[orderBy].toString().toLowerCase();
-    secondValue = b[orderBy].toString().toLowerCase();
+    firstValue = a[orderBy].toLowerCase();
+    secondValue = b[orderBy].toLowerCase();
   }
 
   if (secondValue < firstValue) {
@@ -39,13 +35,11 @@ function descendingComparator(a, b, orderBy, dateSort, numericSort) {
   return 0;
 }
 export function getComparator(order, orderBy, dateSort, numericSort) {
-  console.log("getComparator", dateSort);
   return order === "desc"
     ? (a, b) => descendingComparator(a, b, orderBy, dateSort, numericSort)
     : (a, b) => -descendingComparator(a, b, orderBy, dateSort, numericSort);
 }
 export const convertObjToArray = (obj) => {
-  console.log("convertObjToArray", obj);
   let array = [];
   array =
     obj &&

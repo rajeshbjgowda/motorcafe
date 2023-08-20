@@ -113,3 +113,128 @@ export const serviceListheadCells = [
     isSortable: false,
   },
 ];
+
+
+export const vehicleCompanyheadCells = [
+  {
+    id: "sl No",
+    numeric: false,
+    disablePadding: true,
+    label: "Sl No",
+    isSortable: false,
+  },
+  {
+    id: "company_name",
+    numeric: false,
+    disablePadding: false,
+    label: "Company Name",
+    isSortable: true,
+  },
+
+  {
+    id: "created_at",
+    numeric: false,
+    disablePadding: false,
+    label: "Create At",
+    isSortable: true,
+    isDateSort: true,
+  },
+  {
+    id: "updatedAt",
+    numeric: false,
+    disablePadding: false,
+    label: "Updated At",
+    isSortable: true,
+    isDateSort: true,
+  },
+  {
+    id: "edit",
+    numeric: false,
+    disablePadding: false,
+    label: "Edit",
+    isSortable: false,
+  },
+  {
+    id: "state",
+    numeric: false,
+    disablePadding: false,
+    label: "State",
+    isSortable: false,
+  },
+];
+
+export const vehicleModalheadCells = [
+  {
+    id: "sl No",
+    numeric: false,
+    disablePadding: true,
+    label: "Sl No",
+    isSortable: false,
+  },
+  {
+    id: "company_name",
+    numeric: false,
+    disablePadding: false,
+    label: "Company Name",
+    isSortable: true,
+  },
+
+  {
+    id: "vehicle_modal",
+    numeric: false,
+    disablePadding: false,
+    label: "Modal Name",
+    isSortable: true,
+  },
+  {
+    id: "variant",
+    numeric: false,
+    disablePadding: false,
+    label: " Variant",
+    isSortable: true,
+  },
+  {
+    id: "fuel_type",
+    numeric: false,
+    disablePadding: false,
+    label: "Fuel Type",
+    isSortable: true,
+  },
+  {
+    id: "vehicle_type",
+    numeric: false,
+    disablePadding: false,
+    label: "Vehicle Type",
+    isSortable: true,
+  },
+  {
+    id: "created_at",
+    numeric: false,
+    disablePadding: false,
+    label: "Create At",
+    isSortable: true,
+    isDateSort: true,
+  },
+  {
+    id: "updatedAt",
+    numeric: false,
+    disablePadding: false,
+    label: "Updated At",
+    isSortable: true,
+    isDateSort: true,
+  },
+  {
+    id: "edit",
+    numeric: false,
+    disablePadding: false,
+    label: "Edit",
+    isSortable: false,
+  },
+  {
+    id: "state",
+    numeric: false,
+    disablePadding: false,
+    label: "State",
+    isSortable: false,
+  },
+];

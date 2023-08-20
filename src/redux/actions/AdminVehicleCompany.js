@@ -23,17 +23,14 @@ export const getVehicleCompanyData = () => {
       const vehicleCompanyRef = collection(fireStore, "vehicle_company");
       let details = await getDocs(vehicleCompanyRef);
       let vehicleCompany = [];
-      console.log("details", details.length);
+     
       details.forEach((doc) => {
-        console.log("details", doc.data());
-
         vehicleCompany = [...vehicleCompany, { id: doc.id, ...doc.data() }];
       });
 
       dispatch(getVehicleCompany([...vehicleCompany]));
       // dispatch(getVehicleCompanyLoading(false));
     } catch (error) {
-      console.log(error);
       dispatch(getVehicleCompanyError("somthing went wrong"));
       // getVehicleCompanyLoading(false);
     }

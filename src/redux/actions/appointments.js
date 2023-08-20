@@ -18,7 +18,7 @@ export const getAppointmentsData = () => {
     details.forEach((doc) => {
       appoinmets = [...appoinmets, { id: doc.id, ...doc.data() }];
     });
-    console.log("appointment", appoinmets);
+
     dispatch(getAppointments(appoinmets));
   };
 };

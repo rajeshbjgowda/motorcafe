@@ -100,7 +100,6 @@ const AdminServiceList = () => {
   }, []);
 
   useEffect(() => {
-    console.log("convertObjToArray", service_list);
     let rowsOnMount = stableSort(
       convertObjToArray(service_list),
       getComparator(DEFAULT_ORDER, DEFAULT_ORDER_BY)
@@ -109,7 +108,7 @@ const AdminServiceList = () => {
       0 * DEFAULT_ROWS_PER_PAGE,
       0 * DEFAULT_ROWS_PER_PAGE + DEFAULT_ROWS_PER_PAGE
     );
-    console.log("visibleRows,rowsOnMount", rowsOnMount, rowsOnMount);
+
     setVisibleRows(rowsOnMount);
   }, [service_list]);
 
@@ -128,8 +127,6 @@ const AdminServiceList = () => {
     });
     dispatch(getServiceListData());
   };
-
-  console.log("sd");
 
   const handleDelete = (id) => {
     // const docRef = doc(db, "service", id.toString());
@@ -154,7 +151,6 @@ const AdminServiceList = () => {
     updateDoc(serviceRef, data);
     dispatch(getServiceListData());
   };
-  console.log("service_list", service_list);
 
   //sort functions
 
@@ -205,7 +201,6 @@ const AdminServiceList = () => {
 
   const handleRequestSort = React.useCallback(
     (event, newOrderBy, dateSort, numeric) => {
-      console.log("orderbe", newOrderBy);
       setDateSort(dateSort);
       setNumbericSort(numeric);
       const isAsc = orderBy === newOrderBy && order === "asc";
@@ -227,12 +222,7 @@ const AdminServiceList = () => {
     },
     [order, orderBy, page, rowsPerPage]
   );
-  console.log(
-    " convertObjToArray(service_list)",
-    convertObjToArray(service_list),
-    visibleRows,
-    service_list
-  );
+ 
   return (
     <div className="serviceplanContainer">
       <h1>SERVICE LIST</h1>

@@ -20,17 +20,34 @@ export const getVehicleModalData = () => {
   return async (dispatch) => {
     dispatch(getVehicleModalLoading(true));
     try {
-      const vehicleCompanyRef = collection(fireStore, "vehicleModel");
-      let details = await getDocs(vehicleCompanyRef);
-      let vehicleCompany = [];
+      const vehicleCompanyRef = collection(fireStore, "vehicle_company");
+      let companydetails = await getDocs(vehicleCompanyRef);
+      let vehicleCompany = {};
 
-      details.forEach((doc) => {
-        console.log(doc.data());
-
-        vehicleCompany = [...vehicleCompany, { id: doc.id, ...doc.data() }];
+      companydetails.forEach((doc) => {
+        vehicleCompany = {
+          ...vehicleCompany,
+          [doc.id]: { id: doc.id, ...doc.data() },
+        };
       });
 
-      dispatch(getVehicleModal([...vehicleCompany]));
+      const vehicleModalRef = collection(fireStore, "vehicleModel");
+      let modalDetails = await getDocs(vehicleModalRef);
+      let vehicleModals = [];
+
+      modalDetails.forEach((doc) => {
+        let modalData = doc.data();
+        vehicleModals = [
+          ...vehicleModals,
+          {
+            id: doc.id,
+            ...modalData,
+            company_name: vehicleCompany[modalData.company_name].company_name,
+          },
+        ];
+      });
+
+      dispatch(getVehicleModal([...vehicleModals]));
       // dispatch(getVehicleCompanyLoading(false));
     } catch (error) {
       dispatch(getVehicleModalError("somthing went wrong"));

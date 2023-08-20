@@ -31,7 +31,6 @@ const AddServicesToPlan = ({ handleClose, open, plan, service_list }) => {
     setService(e.target.value);
   };
 
-  console.log("plan", plan, service_list);
 
   const handleAddServiceToPlan = async (e) => {
     setLoading(true);
@@ -45,7 +44,6 @@ const AddServicesToPlan = ({ handleClose, open, plan, service_list }) => {
       setLoading(false);
       handleClose();
     } catch (err) {
-      console.log(err);
       setLoading(false);
       handleClose();
     }
@@ -56,7 +54,6 @@ const AddServicesToPlan = ({ handleClose, open, plan, service_list }) => {
       (item) => !plan.services.includes(item)
     );
     setAddedServices([...services]);
-    console.log("servces", services);
   }, []);
 
   const handleDeleteServiceInPlan = async (removingService) => {
@@ -69,7 +66,6 @@ const AddServicesToPlan = ({ handleClose, open, plan, service_list }) => {
       setLoading(false);
       handleClose();
     } catch (err) {
-      console.log(err);
       setLoading(false);
       handleClose();
     }
