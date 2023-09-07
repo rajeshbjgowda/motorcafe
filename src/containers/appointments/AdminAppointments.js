@@ -56,6 +56,8 @@ import "../styles/tableStyles.scss";
 import axios from "axios";
 import DateRangePickerValue from "../../components/DateRangePicker";
 import CircularProgress from "@mui/material/CircularProgress";
+import { useToasts } from "react-toast-notifications";
+import { errorToastOption, successToastOption } from "../../utils/constants";
 
 const style = {
   position: "absolute",
@@ -90,6 +92,10 @@ const AdminAppointments = () => {
     error: "",
     success: "",
   });
+  const [refundHistoryDetails, setRefundHistoryDetails] = useState({
+    open: false,
+    data: [],
+  });
   const [dateRange, setDateRange] = useState({
     start: 0,
     end: 0,
@@ -97,6 +103,7 @@ const AdminAppointments = () => {
   const [openAddServiceModal, setOpenAddServiceModal] = useState(false);
 
   const db = getFirestore(app);
+  const { addToast } = useToasts();
 
   const dispatch = useDispatch();
 
@@ -297,11 +304,43 @@ const AdminAppointments = () => {
       )
       .then((res) => {
         console.log("razorpay", res);
+        addToast("Refund SuccessFull", successToastOption);
       })
       .catch((err) => {
-        console.log("razorpay", err);
+        addToast("smothing went wrong!", errorToastOption);
       });
   };
+
+  const handleRefundHistoryDetails = (paymentId) => {
+    const data = {
+      razorpayPaymentId: "pay_MJJsgCydYFJjgM",
+    };
+    axios
+      .post(
+        "https://us-central1-motorcafe-7ba65.cloudfunctions.net/payment/api/v1/rp/refund/mutiple/status",
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      )
+      .then((res) => {
+        console.log(res.data.content.items);
+        setRefundHistoryDetails({
+          data: [...res.data.content.items],
+          open: true,
+        });
+      })
+      .catch((err) => {
+        addToast("smothing went wrong!", errorToastOption);
+      });
+  };
+  const handleCloseRefunddetailModal = () => {
+    setRefundHistoryDetails({ open: false, data: [] });
+  };
+  console.log("usersusers", users);
   return (
     <div className="serviceplanContainer">
       <h1>ALL APPOINTMENTS </h1>
@@ -376,7 +415,12 @@ const AdminAppointments = () => {
                       payment collected
                     </StyledTableCell>
                     <StyledTableCell align="center">Refund</StyledTableCell>
-
+                    <StyledTableCell
+                      align="center"
+                      style={{ minWidth: "250px" }}
+                    >
+                      Refund Status
+                    </StyledTableCell>
                     <StyledTableCell align="center">bill</StyledTableCell>
                   </TableRow>
                 </TableHead>
@@ -551,6 +595,19 @@ const AdminAppointments = () => {
                             }
                           >
                             Refund
+                          </Button>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() =>
+                              handleRefundHistoryDetails(
+                                appointment.payments_details?.payment_id
+                              )
+                            }
+                          >
+                            Refund STatus
                           </Button>
                         </StyledTableCell>
                         <StyledTableCell align="center">
@@ -877,6 +934,81 @@ const AdminAppointments = () => {
               Refund
             </LoadingButton>
           </form>
+        </Box>
+      </Modal>
+
+      <Modal
+        open={refundHistoryDetails.open}
+        onClose={handleCloseRefunddetailModal}
+        aria-labelledby="parent-modal-title"
+        aria-describedby="parent-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "white",
+            padding: 4,
+            borderRadius: "5px",
+            minWidth: 500,
+            maxHeight: "95vh",
+            overflowY: "auto",
+          }}
+        >
+          <Grid container spacing={2}>
+            {refundHistoryDetails.data.length <= 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: "50px",
+                }}
+              >
+                <CircularProgress style={{ height: 40, width: 40 }} />
+              </div>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table sx={{ minWidth: 650 }} aria-label="simple table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>sl.no </TableCell>
+                      <TableCell>Refund AMount </TableCell>
+                      <TableCell>Payment Id</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {refundHistoryDetails?.data.map((row, index) => {
+                      return (
+                        <TableRow
+                          key={row.name}
+                          sx={{
+                            "&:last-child td, &:last-child th": { border: 0 },
+                          }}
+                        >
+                          <TableCell component="th" scope="row">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell component="th" scope="row">
+                            {(row.amount / 100).toFixed(2)}
+                          </TableCell>
+                          <TableCell component="th" scope="row">
+                            {row.payment_id}
+                          </TableCell>
+                          <TableCell component="th" scope="row">
+                            {row.status}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Grid>
         </Box>
       </Modal>
 

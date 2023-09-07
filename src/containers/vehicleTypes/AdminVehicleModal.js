@@ -92,7 +92,7 @@ const AdmicVehicleModal = () => {
 
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [page, setPage] = React.useState(0);
-  const [orderBy, setOrderBy] = React.useState("");
+  const [orderBy, setOrderBy] = React.useState(DEFAULT_ORDER_BY);
   const [visibleRows, setVisibleRows] = React.useState(null);
 
   const { vehicleCompanies } = useSelector(

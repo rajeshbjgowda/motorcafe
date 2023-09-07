@@ -88,7 +88,7 @@ const AdmicVehicleCompany = () => {
   const [dateSort, setDateSort] = React.useState(false);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [page, setPage] = React.useState(0);
-  const [orderBy, setOrderBy] = React.useState("");
+  const [orderBy, setOrderBy] = React.useState(DEFAULT_ORDER_BY);
   const [visibleRows, setVisibleRows] = React.useState(null);
 
   const { loading, error, vehicleCompanies } = useSelector(
@@ -164,15 +164,7 @@ const AdmicVehicleCompany = () => {
     setVehicleCompany(company.company_name);
     handleOpen();
   };
-  const handleDelete = async (id) => {
-    // const docRef = doc(fireStore, "vehicle_company", id.toString());
-    // try {
-    //   await deleteDoc(docRef);
-    //   dispatch(getVehicleCompanyData());
-    // } catch (err) {
-    //   //
-    // }
-  };
+ 
 
   const handleActiveState = async (e, id) => {
     const cmpanyRef = doc(fireStore, "vehicle_company", id.toString());
@@ -184,27 +176,36 @@ const AdmicVehicleCompany = () => {
     dispatch(getVehicleCompanyData());
   };
 
-  const handleChangePage = React.useCallback((event, newPage) => {
+  const handleChangePage = (event, newPage) => {
     setPage(newPage);
-
+    console.log(
+      "handlePage",
+      newPage,
+      stableSort(
+        vehicleCompanies,
+        getComparator(order, orderBy, dateSort),
+        dateSort
+      )
+    );
     const sortedRows = stableSort(
       vehicleCompanies,
       getComparator(order, orderBy, dateSort),
       dateSort
     );
+    console.log("handlePage1", vehicleCompanies, sortedRows);
+
     const updatedRows = sortedRows.slice(
       newPage * rowsPerPage,
       newPage * rowsPerPage + rowsPerPage
     );
-
+    console.log("sortedRows", sortedRows);
     setVisibleRows(updatedRows);
 
-    // Avoid a layout jump when reaching the last page with empty rows.
     const numEmptyRows =
       newPage > 0
         ? Math.max(0, (1 + newPage) * rowsPerPage - vehicleCompanies.length)
         : 0;
-  }, []);
+  };
 
   const handleChangeRowsPerPage = React.useCallback(
     (event) => {
@@ -344,7 +345,10 @@ const AdmicVehicleCompany = () => {
             count={vehicleCompanies.length}
             rowsPerPage={rowsPerPage}
             page={page}
-            onPageChange={handleChangePage}
+            onPageChange={(e, ty) => {
+              console.log("handleChangePage");
+              handleChangePage(e, ty);
+            }}
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </div>

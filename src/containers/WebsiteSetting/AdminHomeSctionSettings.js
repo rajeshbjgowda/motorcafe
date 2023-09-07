@@ -1,28 +1,15 @@
 import React, { useEffect, useState } from "react";
-import Switch from "@mui/material/Switch";
-import FormGroup from "@mui/material/FormGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
+
 import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import { useForm } from "react-hook-form";
+
 import { app, fireStore, storage } from "../firebase";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  listAll,
-  list,
-} from "firebase/storage";
+import InputLabel from "@mui/material/InputLabel";
+
 import {
   addDoc,
-  arrayRemove,
-  arrayUnion,
   collection,
   deleteDoc,
   doc,
-  FieldValue,
-  getDoc,
-  getDocs,
   getFirestore,
   updateDoc,
 } from "firebase/firestore";
@@ -40,38 +27,50 @@ import {
 import { useDispatch } from "react-redux";
 import { useSelector } from "react-redux";
 import { getSliddersData } from "../../redux/actions/Homesection";
-import { async } from "@firebase/util";
+import { useToasts } from "react-toast-notifications";
 import {
   StyledTableCell,
   StyledTableRow,
 } from "../../components/mui-components/TableComponents";
-import { yupResolver } from "@hookform/resolvers/yup";
+import CircularProgress from "@mui/material/CircularProgress";
 import * as yup from "yup";
 import { uploadFileToFirebase } from "../../utils/functions";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
+import { errorToastOption, successToastOption } from "../../utils/constants";
 
-const schema = yup.object().shape({
-  heading: yup.string().required("reqired"),
-  sub_heading: yup.string().required("reqired"),
-  content: yup.string().required("required"),
-  slidder_image: yup.mixed().required("required"),
-});
 const AdminHomeSctionSlidders = () => {
-  const [uploadedImage, setUploadedImage] = useState("");
-  const [modelUpdateId, setModelUpdateId] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  const [modelUpdateId, setModelUpdateId] = useState("");
+  const { addToast } = useToasts();
   const sliddersRef = collection(fireStore, "slidders");
   const db = getFirestore(app);
 
   const dispatch = useDispatch();
   const slidders = useSelector((state) => state.homeSectionReducer.slidders);
 
+  const getSliders = () => {
+    try {
+      dispatch(getSliddersData());
+    } catch (error) {
+      addToast("Something went wrong", errorToastOption);
+    }
+    setLoading(false);
+  };
   useEffect(() => {
-    dispatch(getSliddersData());
+    getSliders();
   }, []);
 
   const addSlidders = async (e) => {
     e.preventDefault();
 
+    const selectedImage = e.target.slidder_image.files[0];
+    if (selectedImage.size > 2 * 1024 * 1024) {
+      addToast("Please Add Image Less Than 2MB", errorToastOption);
+      return;
+    }
+    setLoading(true);
     const image_url = await uploadFileToFirebase(
       e.target.slidder_image.files[0]
     );
@@ -83,6 +82,7 @@ const AdminHomeSctionSlidders = () => {
         heading: e.target.heading.value,
         image: image_url,
         sub_heading: e.target.sub_heading.value,
+        type: e.target.type.value,
       };
 
       await updateDoc(docRef, Updatedata)
@@ -98,6 +98,7 @@ const AdminHomeSctionSlidders = () => {
         heading: e.target.heading.value,
         image: image_url,
         sub_heading: e.target.sub_heading.value,
+        type: e.target.type.value,
       };
       try {
         addDoc(sliddersRef, Details).then(async (res) => {});
@@ -105,14 +106,14 @@ const AdminHomeSctionSlidders = () => {
         console.log(error);
       }
     }
-    dispatch(getSliddersData());
+    getSliders();
   };
   const deleteSlidder = async (id) => {
+    setLoading(true);
     const docRef = doc(db, "slidders", id.toString());
-
     deleteDoc(docRef);
 
-    dispatch(getSliddersData());
+    getSliders();
   };
   return (
     <div>
@@ -145,7 +146,20 @@ const AdminHomeSctionSlidders = () => {
               name="content"
             />
           </Grid>
-
+          <Grid item xs={6} style={{ marginTop: "15px" }}>
+            <FormControl fullWidth>
+              <InputLabel id="demo-simple-select-label">Select Type</InputLabel>
+              <Select
+                labelId="demo-simple-select-label"
+                id="demo-simple-select"
+                name="type"
+                label="Select Type"
+              >
+                <MenuItem value={"offers"}>Offers</MenuItem>
+                <MenuItem value={"sidder"}>slidder</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
           <Grid item xs={6} style={{ marginTop: "15px" }}>
             <TextField
               variant="outlined"
@@ -155,6 +169,7 @@ const AdminHomeSctionSlidders = () => {
               // onChange={(e) => setValue("slidder_image", e.target.files[0])}
               required
               name="slidder_image"
+              helperText="Add Image less than 2MB"
             />
           </Grid>
         </Grid>
@@ -168,71 +183,87 @@ const AdminHomeSctionSlidders = () => {
           </Button>
         </div>
       </form>
+      {loading ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: "50px",
+          }}
+        >
+          <CircularProgress style={{ height: 80, width: 80 }} />
+        </div>
+      ) : (
+        <div className="tableContainer">
+          <TableContainer component={Paper}>
+            <Table
+              aria-label="customized table"
+              sx={{ minWidth: 750, overflowX: "scroll" }}
+            >
+              <TableHead>
+                <TableRow>
+                  <StyledTableCell align="center">Sl.No</StyledTableCell>
 
-      <div className="tableContainer">
-        <TableContainer component={Paper}>
-          <Table
-            aria-label="customized table"
-            sx={{ minWidth: 750, overflowX: "scroll" }}
-          >
-            <TableHead>
-              <TableRow>
-                <StyledTableCell align="center">Sl.No</StyledTableCell>
+                  <StyledTableCell align="center">Heading</StyledTableCell>
+                  <StyledTableCell align="center">SubHeading</StyledTableCell>
+                  <StyledTableCell align="center"> Type</StyledTableCell>
+                  <StyledTableCell align="center"> content</StyledTableCell>
 
-                <StyledTableCell align="center">Heading</StyledTableCell>
-                <StyledTableCell align="center">SubHeading</StyledTableCell>
-                <StyledTableCell align="center"> content</StyledTableCell>
+                  <StyledTableCell align="center"> image</StyledTableCell>
 
-                <StyledTableCell align="center"> image</StyledTableCell>
+                  <StyledTableCell align="center">Delete</StyledTableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {slidders &&
+                  slidders.map((slider, index) => (
+                    <StyledTableRow key={slider.id}>
+                      <StyledTableCell align="center">
+                        {index + 1}
+                      </StyledTableCell>
 
-                <StyledTableCell align="center">Delete</StyledTableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {slidders &&
-                slidders.map((slider, index) => (
-                  <StyledTableRow key={slider.id}>
-                    <StyledTableCell align="center">
-                      {index + 1}
-                    </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {slider.heading}
+                      </StyledTableCell>
 
-                    <StyledTableCell align="center">
-                      {slider.heading}
-                    </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {slider.sub_heading}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {slider.type}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {slider.content}
+                      </StyledTableCell>
 
-                    <StyledTableCell align="center">
-                      {slider.sub_heading}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      {slider.content}
-                    </StyledTableCell>
-
-                    <StyledTableCell align="center">
-                      <img
-                        src={slider.image}
-                        width="20px"
-                        height={"20px"}
-                        alt="slider"
-                      />
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        color="error"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          deleteSlidder(slider.id);
-                        }}
-                      >
-                        delete
-                      </Button>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </div>
+                      <StyledTableCell align="center">
+                        <img
+                          src={slider.image}
+                          width="20px"
+                          height={"20px"}
+                          alt="slider"
+                        />
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        <Button
+                          variant="contained"
+                          color="error"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            deleteSlidder(slider.id);
+                          }}
+                        >
+                          delete
+                        </Button>
+                      </StyledTableCell>
+                    </StyledTableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </div>
+      )}
     </div>
   );
 };

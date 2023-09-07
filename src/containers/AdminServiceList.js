@@ -82,7 +82,7 @@ const AdminServiceList = () => {
 
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [page, setPage] = React.useState(0);
-  const [orderBy, setOrderBy] = React.useState("");
+  const [orderBy, setOrderBy] = React.useState(DEFAULT_ORDER_BY);
   const [visibleRows, setVisibleRows] = React.useState(null);
 
   const db = getFirestore(app);
@@ -154,33 +154,38 @@ const AdminServiceList = () => {
 
   //sort functions
 
-  const handleChangePage = React.useCallback((event, newPage) => {
-    setPage(newPage);
+  const handleChangePage = React.useCallback(
+    (event, newPage) => {
+      setPage(newPage);
+      const sortedRows = stableSort(
+        convertObjToArray(service_list),
+        getComparator(order, orderBy, dateSort, numericSort),
+        dateSort
+      );
+      const updatedRows = sortedRows.slice(
+        newPage * rowsPerPage,
+        newPage * rowsPerPage + rowsPerPage
+      );
+      console.log("sortedRows", sortedRows);
 
-    const sortedRows = stableSort(
-      convertObjToArray(service_list),
-      getComparator(order, orderBy, dateSort, numericSort),
-      dateSort
-    );
-    const updatedRows = sortedRows.slice(
-      newPage * rowsPerPage,
-      newPage * rowsPerPage + rowsPerPage
-    );
+      setVisibleRows(updatedRows);
 
-    setVisibleRows(updatedRows);
-
-    // Avoid a layout jump when reaching the last page with empty rows.
-    const numEmptyRows =
-      newPage > 0
-        ? Math.max(
-            0,
-            (1 + newPage) * rowsPerPage - convertObjToArray(service_list).length
-          )
-        : 0;
-  }, []);
+      // Avoid a layout jump when reaching the last page with empty rows.
+      const numEmptyRows =
+        newPage > 0
+          ? Math.max(
+              0,
+              (1 + newPage) * rowsPerPage -
+                convertObjToArray(service_list).length
+            )
+          : 0;
+    },
+    [service_list]
+  );
 
   const handleChangeRowsPerPage = React.useCallback(
     (event) => {
+      console.log("sortedRows", sortedRows);
       const updatedRowsPerPage = parseInt(event.target.value, 10);
       setRowsPerPage(updatedRowsPerPage);
       setPage(0);
@@ -193,10 +198,11 @@ const AdminServiceList = () => {
         0 * updatedRowsPerPage,
         0 * updatedRowsPerPage + updatedRowsPerPage
       );
+
       setVisibleRows(updatedRows);
       // There is no layout jump to handle on the first page.
     },
-    [order, orderBy]
+    [order, orderBy, service_list]
   );
 
   const handleRequestSort = React.useCallback(
@@ -222,7 +228,7 @@ const AdminServiceList = () => {
     },
     [order, orderBy, page, rowsPerPage]
   );
- 
+  console.log("service_list", service_list);
   return (
     <div className="serviceplanContainer">
       <h1>SERVICE LIST</h1>

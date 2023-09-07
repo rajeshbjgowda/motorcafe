@@ -14,3 +14,16 @@ export const USER_TYPES = {
     collection: "admins",
   },
 };
+
+
+export const errorToastOption = {
+  appearance: "error",
+  autoDismiss: true,
+  placement: "bottom-center",
+};
+
+export const successToastOption = {
+  appearance: "success",
+  autoDismiss: true,
+  placement: "bottom-center",
+};

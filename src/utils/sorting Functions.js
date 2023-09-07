@@ -1,4 +1,5 @@
 export function stableSort(array, comparator, dateSort) {
+
   const stabilizedThis = array.map((el, index) => [el, index]);
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -7,6 +8,7 @@ export function stableSort(array, comparator, dateSort) {
     }
     return a[1] - b[1];
   });
+  console.log("handlePage", stabilizedThis);
 
   return stabilizedThis.map((el) => el[0]);
 }
@@ -14,7 +16,7 @@ export function stableSort(array, comparator, dateSort) {
 function descendingComparator(a, b, orderBy, dateSort, numericSort) {
   let firstValue;
   let secondValue;
-
+console.log("descendingComparator", a, b, orderBy, dateSort, numericSort);
   if (dateSort) {
     firstValue = a[orderBy].seconds;
     secondValue = b[orderBy].seconds;

@@ -1,30 +1,13 @@
 import React, { useEffect, useState } from "react";
-import Switch from "@mui/material/Switch";
-import FormGroup from "@mui/material/FormGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import { useForm } from "react-hook-form";
+
 import { app, fireStore, storage } from "../firebase";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  listAll,
-  list,
-} from "firebase/storage";
+
 import {
   addDoc,
-  arrayRemove,
-  arrayUnion,
   collection,
   deleteDoc,
   doc,
-  FieldValue,
-  getDoc,
-  getDocs,
   getFirestore,
-  updateDoc,
 } from "firebase/firestore";
 import {
   Button,
@@ -43,19 +26,22 @@ import {
   getSliddersData,
   getWebServicesData,
 } from "../../redux/actions/Homesection";
-import { async } from "@firebase/util";
 import {
   StyledTableCell,
   StyledTableRow,
 } from "../../components/mui-components/TableComponents";
+import CircularProgress from "@mui/material/CircularProgress";
+
 import { uploadFileToFirebase } from "../../utils/functions";
 import { LoadingButton } from "@mui/lab";
+import { useToasts } from "react-toast-notifications";
+import { errorToastOption } from "../../utils/constants";
 
 const WebCarServices = () => {
   const [loading, setLoading] = useState(false);
   const [modelUpdateId, setModelUpdateId] = useState("");
+  const { addToast } = useToasts();
 
-  const sliddersRef = collection(fireStore, "web_car_services");
   const db = getFirestore(app);
 
   const dispatch = useDispatch();
@@ -69,6 +55,11 @@ const WebCarServices = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const selectedImage = e.target.image.files[0];
+    if (selectedImage.size > 2 * 1024 * 1024) {
+      addToast("Please Add Image Less Than 2MB", errorToastOption);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -135,6 +126,7 @@ const WebCarServices = () => {
               name="image"
               required
               fullWidth
+              helperText="Add Image less than 2MB"
             />
           </Grid>
         </Grid>
@@ -154,68 +146,80 @@ const WebCarServices = () => {
           </LoadingButton>
         </div>
       </form>
+      {loading ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: "50px",
+          }}
+        >
+          <CircularProgress style={{ height: 80, width: 80 }} />
+        </div>
+      ) : (
+        <div className="tableContainer">
+          <TableContainer component={Paper}>
+            <Table
+              aria-label="customized table"
+              sx={{ minWidth: 750, overflowX: "scroll" }}
+            >
+              <TableHead>
+                <TableRow>
+                  <StyledTableCell align="center">Sl.No</StyledTableCell>
 
-      <div className="tableContainer">
-        <TableContainer component={Paper}>
-          <Table
-            aria-label="customized table"
-            sx={{ minWidth: 750, overflowX: "scroll" }}
-          >
-            <TableHead>
-              <TableRow>
-                <StyledTableCell align="center">Sl.No</StyledTableCell>
+                  <StyledTableCell align="center">Heading</StyledTableCell>
 
-                <StyledTableCell align="center">Heading</StyledTableCell>
+                  <StyledTableCell align="center"> content</StyledTableCell>
 
-                <StyledTableCell align="center"> content</StyledTableCell>
+                  <StyledTableCell align="center"> image</StyledTableCell>
 
-                <StyledTableCell align="center"> image</StyledTableCell>
+                  <StyledTableCell align="center">Delete</StyledTableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {webServices &&
+                  webServices.map((service, index) => (
+                    <StyledTableRow key={service.id}>
+                      <StyledTableCell align="center">
+                        {index + 1}
+                      </StyledTableCell>
 
-                <StyledTableCell align="center">Delete</StyledTableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {webServices &&
-                webServices.map((service, index) => (
-                  <StyledTableRow key={service.id}>
-                    <StyledTableCell align="center">
-                      {index + 1}
-                    </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {service.heading}
+                      </StyledTableCell>
 
-                    <StyledTableCell align="center">
-                      {service.heading}
-                    </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {service.content}
+                      </StyledTableCell>
 
-                    <StyledTableCell align="center">
-                      {service.content}
-                    </StyledTableCell>
-
-                    <StyledTableCell align="center">
-                      <img
-                        src={service.image_url}
-                        width="20px"
-                        height={"20px"}
-                        alt="slider"
-                      />
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Button
-                        variant="contained"
-                        color="error"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          deleteSlidder(service.id);
-                        }}
-                      >
-                        delete
-                      </Button>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </div>
+                      <StyledTableCell align="center">
+                        <img
+                          src={service.image_url}
+                          width="20px"
+                          height={"20px"}
+                          alt="slider"
+                        />
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        <Button
+                          variant="contained"
+                          color="error"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            deleteSlidder(service.id);
+                          }}
+                        >
+                          delete
+                        </Button>
+                      </StyledTableCell>
+                    </StyledTableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </div>
+      )}
     </div>
   );
 };

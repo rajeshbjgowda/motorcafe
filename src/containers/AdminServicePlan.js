@@ -137,18 +137,11 @@ const AdminServicePlan = () => {
   const [dateSort, setDateSort] = React.useState(false);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [page, setPage] = React.useState(0);
-  const [orderBy, setOrderBy] = React.useState("");
+  const [orderBy, setOrderBy] = React.useState(DEFAULT_ORDER_BY);
   const [visibleRows, setVisibleRows] = React.useState(null);
 
-  const [addServiceToPlan, setAddServicePlan] = useState("");
   const [modelUpdateId, setModelUpdateId] = useState("");
-  const [serviceID, setServiceId] = useState("");
 
-  const [serviceImage, setServiceImage] = useState("");
-  const [uploadedImage, setUploadedImage] = useState("");
-
-  const planRef = collection(fireStore, "plan");
-  const servicesRef = collection(fireStore, "service");
   const db = getFirestore(app);
 
   const dispatch = useDispatch();
@@ -191,16 +184,6 @@ const AdminServicePlan = () => {
     setOpenCreatePlan(true);
   };
 
-  const handleDelete = async (id) => {
-    const docRef = doc(db, "plan", id.toString());
-    deleteDoc(docRef);
-    let serviceId = includedServicesList[id].id;
-    const serviceRef = doc(db, "service", serviceId.toString());
-    await deleteDoc(serviceRef);
-    dispatch(getServicePlanData());
-    dispatch(getServicePlanPriceData());
-  };
-
   const handleCloseCreatePlanModal = () => {
     setOpenCreatePlan(false);
     setModelUpdateId("");
@@ -214,7 +197,6 @@ const AdminServicePlan = () => {
     dispatch(getServicePlanPriceData());
   };
 
- 
   const handleActiveState = (e, id) => {
     const planRef = doc(fireStore, "plan", id.toString());
 
@@ -226,27 +208,30 @@ const AdminServicePlan = () => {
     dispatch(getServicePlanData());
   };
 
-  const handleChangePage = React.useCallback((event, newPage) => {
-    setPage(newPage);
+  const handleChangePage = React.useCallback(
+    (event, newPage) => {
+      setPage(newPage);
 
-    const sortedRows = stableSort(
-      servicePlans,
-      getComparator(order, orderBy, dateSort),
-      dateSort
-    );
-    const updatedRows = sortedRows.slice(
-      newPage * rowsPerPage,
-      newPage * rowsPerPage + rowsPerPage
-    );
+      const sortedRows = stableSort(
+        servicePlans,
+        getComparator(order, orderBy, dateSort),
+        dateSort
+      );
+      const updatedRows = sortedRows.slice(
+        newPage * rowsPerPage,
+        newPage * rowsPerPage + rowsPerPage
+      );
 
-    setVisibleRows(updatedRows);
+      setVisibleRows(updatedRows);
 
-    // Avoid a layout jump when reaching the last page with empty rows.
-    const numEmptyRows =
-      newPage > 0
-        ? Math.max(0, (1 + newPage) * rowsPerPage - servicePlans.length)
-        : 0;
-  }, []);
+      // Avoid a layout jump when reaching the last page with empty rows.
+      const numEmptyRows =
+        newPage > 0
+          ? Math.max(0, (1 + newPage) * rowsPerPage - servicePlans.length)
+          : 0;
+    },
+    [servicePlans]
+  );
 
   const handleChangeRowsPerPage = React.useCallback(
     (event) => {

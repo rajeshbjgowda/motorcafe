@@ -286,10 +286,7 @@ const homeSectionSubmenu = [
     name: "teams",
     route: "teams",
   },
-  {
-    name: "plans",
-    route: "plans",
-  },
+
   {
     name: "details",
     route: "details",
